@@ -71,6 +71,7 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           VERSION: ${{ inputs.release_version }}
           COMMIT: ${{ needs.build.outputs.commit }}
         run: gh release create "v$VERSION" artifacts/*.bin --target "$COMMIT" --generate-notes
