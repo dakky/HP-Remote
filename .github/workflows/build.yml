@@ -21,7 +21,7 @@ jobs:
       artifact_name: ${{ steps.artifact.outputs.name }}
       commit: ${{ steps.commit.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
           fetch-depth: 0
@@ -50,7 +50,7 @@ jobs:
         name: Set artifact name
         run: echo "name=hp-remote-${{ steps.commit.outputs.sha }}" >> "$GITHUB_OUTPUT"
       - name: Upload firmware artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact.outputs.name }}
           path: .pio/build/xiao_esp32s3/artifacts/
@@ -64,7 +64,7 @@ jobs:
       contents: write
     steps:
       - name: Download firmware artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: artifacts
