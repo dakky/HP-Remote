@@ -2,10 +2,14 @@ name: Firmware build
 
 on:
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version without the v prefix, for example 1.2.0
+        required: false
+        type: string
   pull_request:
   push:
-    branches: [main]
-    tags: ["v*"]
+    branches: ["**"]
 
 permissions:
   contents: read
@@ -13,10 +17,27 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+      commit: ${{ steps.commit.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
           fetch-depth: 0
+      - id: commit
+        name: Record build commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Prepare release version
+        if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
+        env:
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Release version must use major.minor.patch."
+            exit 1
+          }
+          git tag "v$VERSION"
       - name: Build PlatformIO container
         run: docker build --tag hp-remote-builder --file Containerfile .
       - name: Build firmware
@@ -25,15 +46,18 @@ jobs:
           --volume "$GITHUB_WORKSPACE:/workspace"
           --workdir /workspace
           hp-remote-builder run -e xiao_esp32s3
+      - id: artifact
+        name: Set artifact name
+        run: echo "name=hp-remote-${{ steps.commit.outputs.sha }}" >> "$GITHUB_OUTPUT"
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: hp-remote-${{ github.sha }}
+          name: ${{ steps.artifact.outputs.name }}
           path: .pio/build/xiao_esp32s3/artifacts/
           if-no-files-found: error
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -42,9 +66,11 @@ jobs:
       - name: Download firmware artifacts
         uses: actions/download-artifact@v4
         with:
-          name: hp-remote-${{ github.sha }}
+          name: ${{ needs.build.outputs.artifact_name }}
           path: artifacts
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" artifacts/*.bin --generate-notes
+          VERSION: ${{ inputs.release_version }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        run: gh release create "v$VERSION" artifacts/*.bin --target "$COMMIT" --generate-notes

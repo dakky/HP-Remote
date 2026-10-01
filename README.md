@@ -99,13 +99,10 @@ Für Podman wird `docker` durch `podman` ersetzt.
 
 ## Release erstellen
 
-Ein Tag im Format `v<major>.<minor>.<patch>` erstellt ein GitHub Release.
-
-```sh
-# Alle Release-Änderungen committen und pushen.
-git tag -a --no-sign v1.2.0 -m "HP-Remote 1.2.0"
-git push origin v1.2.0
-```
+In GitHub Actions **Firmware build > Run workflow** starten und die
+Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow baut
+den aktuellen `main`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
+GitHub Release.
 
 Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`. Der
 Web-Installer lädt automatisch das neueste Release.
