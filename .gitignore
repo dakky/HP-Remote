@@ -15,7 +15,8 @@
 .vscode/ipch
 .vscode/settings.json
 
-# ESP32 / Arduino (firmware .bin wird bewusst committet für den Web-Installer)
+# ESP32 / Arduino
+*.bin
 *.elf
 *.map
 *.hex

@@ -1,11 +1,11 @@
 {
   "name": "HP-Remote",
-  "version": "1.0.0",
+  "version": "latest",
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "parts": [
-        { "path": "HP-Remote-merged.bin", "offset": 0 }
+        { "path": "https://github.com/DocBigs-Lab/HP-Remote/releases/latest/download/HP-Remote-merged.bin", "offset": 0 }
       ]
     }
   ]

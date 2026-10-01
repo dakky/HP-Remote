@@ -628,6 +628,11 @@ progress{
     </div>
 
     <div class="statusItem">
+      <div class="k">Firmware Build</div>
+      <div class="v" id="st_fw_build">-</div>
+    </div>
+
+    <div class="statusItem">
       <div class="k">ESP32 Temperature</div>
       <div class="v" id="st_temp">-</div>
     </div>
@@ -1411,6 +1416,10 @@ async function loadStatus(){
     s.camera?.frame || '-';
   document.getElementById('st_fw_version').textContent =
     s.system?.fw_version || '-';
+  document.getElementById('st_fw_build').textContent =
+    s.system?.fw_commit && s.system?.fw_build
+      ? s.system.fw_commit + ' (' + s.system.fw_build + ')'
+      : '-';
   document.getElementById('st_uptime').textContent =
     formatUptime(s.system?.uptime_s ?? 0);
 

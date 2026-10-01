@@ -8,10 +8,12 @@ def post_firmware(source, target, env):
     build_dir   = env.subst("$BUILD_DIR")
     project_dir = env.subst("$PROJECT_DIR")
 
-    # Neuer Zielordner: "docs" im Projektverzeichnis
-    docs_dir = os.path.join(project_dir, "docs")
-    # Erstellt den Ordner, falls er noch nicht existiert
-    os.makedirs(docs_dir, exist_ok=True)
+    artifact_dir = os.environ.get("HP_REMOTE_ARTIFACT_DIR")
+    if not artifact_dir:
+        artifact_dir = os.path.join(build_dir, "artifacts")
+    elif not os.path.isabs(artifact_dir):
+        artifact_dir = os.path.join(project_dir, artifact_dir)
+    os.makedirs(artifact_dir, exist_ok=True)
 
     bootloader = os.path.join(build_dir, "bootloader.bin")
     partitions = os.path.join(build_dir, "partitions.bin")
@@ -19,7 +21,7 @@ def post_firmware(source, target, env):
 
     # ─── 1. OTA-Datei: firmware.bin → HP-Remote-OTA.bin ──────────────────────
     if os.path.exists(firmware):
-        ota_out = os.path.join(docs_dir, "HP-Remote-OTA.bin")
+        ota_out = os.path.join(artifact_dir, "HP-Remote-OTA.bin")
         try:
             shutil.copyfile(firmware, ota_out)
             print(f"OTA firmware ready: {ota_out} ({os.path.getsize(ota_out):,} bytes)")
@@ -29,7 +31,7 @@ def post_firmware(source, target, env):
         print("post_firmware: firmware.bin not ready – skipping OTA copy")
 
     # ─── 2. Merged-Datei für erstes USB-Flashen ──────────────────────────────
-    merged = os.path.join(docs_dir, "HP-Remote-merged.bin")
+    merged = os.path.join(artifact_dir, "HP-Remote-merged.bin")
 
     boot_app0 = os.path.join(
         env.subst("$PROJECT_PACKAGES_DIR"),

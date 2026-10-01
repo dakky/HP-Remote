@@ -78,6 +78,43 @@ ESP32-S3-CAM per USB anschließen, „Install" klicken (Chrome / Edge).
 
 ---
 
+## Firmware bauen
+
+Die Firmware-Artefakte liegen unter `.pio/build/xiao_esp32s3/artifacts/`.
+
+```sh
+pio run -e xiao_esp32s3
+```
+
+Alternativ kann der Build mit Docker oder Podman ausgeführt werden:
+
+```sh
+docker build -t hp-remote-builder -f Containerfile .
+docker run --rm -v "$PWD:/workspace" -w /workspace hp-remote-builder run -e xiao_esp32s3
+```
+
+Für Podman wird `docker` durch `podman` ersetzt.
+
+---
+
+## Release erstellen
+
+Ein Tag im Format `v<major>.<minor>.<patch>` erstellt ein GitHub Release.
+
+```sh
+# Alle Release-Änderungen committen und pushen.
+git tag -a --no-sign v1.2.0 -m "HP-Remote 1.2.0"
+git push origin v1.2.0
+```
+
+Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`. Der
+Web-Installer lädt automatisch das neueste Release.
+
+Zum Testen ohne Release: In GitHub Actions **Run workflow** für den gewünschten
+Branch ausführen.
+
+---
+
 ## Projektstruktur
 
 ```
@@ -98,18 +135,16 @@ HP-Remote/
 │   ├── wifi_manager.cpp/.h       ← WiFi + AP-Setup
 │   ├── ota_service.cpp/.h        ← OTA
 │   └── debug_log.h               ← Log-Makros
-├── docs/                          ← Dokumentation + kompilierte Binaries
+├── docs/                          ← Dokumentation + Web-Installer
 │   ├── HARDWARE.md                ← Hardware & Montage
 │   ├── SETUP.md                   ← Inbetriebnahme & Konfiguration
 │   ├── DEBUG.md                   ← Test & Debugging
 │   ├── MQTT-EXAMPLES.md           ← MQTT-Steuerung ohne Home Assistant
-│   ├── images/                    ← Bilder für die Doku
-│   ├── HP-Remote-merged.bin       ← Erstinstallation (USB, alle Partitionen)
-│   └── HP-Remote-OTA.bin          ← OTA-Update (nur Applikation)
+│   └── images/                    ← Bilder für die Doku
 ├── platformio.ini                ← Board: esp32-s3-devkitc-1, qio_opi PSRAM
 ├── partitions_ota.csv            ← OTA-Partitionstabelle
 ├── version_build.py              ← injiziert FW_VERSION + FW_BUILD
-├── merge_bin.py                  ← erzeugt HP-Remote-OTA.bin + HP-Remote-merged.bin
+├── merge_bin.py                  ← erzeugt Firmware-Artefakte unter .pio/build/
 └── README.md                     ← Übersicht (dieses Dokument)
 ```
 
