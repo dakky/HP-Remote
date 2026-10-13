@@ -101,7 +101,7 @@ Für Podman wird `docker` durch `podman` ersetzt.
 
 In GitHub Actions **Firmware build > Run workflow** starten und die
 Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow baut
-den aktuellen `main`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
+den aktuellen `release`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
 GitHub Release.
 
 Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`. Der

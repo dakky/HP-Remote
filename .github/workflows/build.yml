@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'release' || github.ref }}
           fetch-depth: 0
       - id: commit
         name: Record build commit
