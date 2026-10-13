@@ -2,7 +2,6 @@ Import("env")
 import os
 import shutil
 import subprocess
-import sys
 
 def post_firmware(source, target, env):
     build_dir   = env.subst("$BUILD_DIR")
@@ -47,7 +46,7 @@ def post_firmware(source, target, env):
         "tool-esptoolpy", "esptool.py"
     )
 
-    python = sys.executable
+    python = env.subst("$PYTHONEXE")
 
     cmd = [
         python, esptool_path,
