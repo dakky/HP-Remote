@@ -5,7 +5,7 @@
     {
       "chipFamily": "ESP32-S3",
       "parts": [
-        { "path": "https://github.com/DocBigs-Lab/HP-Remote/releases/latest/download/HP-Remote-merged.bin", "offset": 0 }
+        { "path": "HP-Remote-merged.bin", "offset": 0 }
       ]
     }
   ]

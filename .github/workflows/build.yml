@@ -75,3 +75,38 @@ jobs:
           VERSION: ${{ inputs.release_version }}
           COMMIT: ${{ needs.build.outputs.commit }}
         run: gh release create "v$VERSION" artifacts/*.bin --target "$COMMIT" --generate-notes
+
+  pages:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: artifacts
+      # Der Web-Installer lädt die Firmware per fetch(); GitHub-Release-Downloads
+      # liefern keine CORS-Header, daher muss die Datei auf derselben Origin liegen.
+      - name: Assemble web installer
+        env:
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          mkdir site
+          cp -r docs/. site/
+          cp artifacts/HP-Remote-merged.bin site/
+          jq --arg version "$VERSION" '.version = $version' docs/manifest.json > site/manifest.json
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5
