@@ -104,8 +104,10 @@ Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow baut
 den aktuellen `main`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
 GitHub Release.
 
-Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`. Der
-Web-Installer lädt automatisch das neueste Release.
+Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`.
+Anschließend veröffentlicht der Workflow den Web-Installer (`docs/`) zusammen
+mit der `HP-Remote-merged.bin` des Releases auf GitHub Pages. Dafür muss unter
+**Settings > Pages > Source** einmalig **GitHub Actions** ausgewählt sein.
 
 Zum Testen ohne Release: In GitHub Actions **Run workflow** für den gewünschten
 Branch ausführen.

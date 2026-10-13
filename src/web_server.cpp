@@ -356,8 +356,8 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 #define FW_BUILD "unknown"
 #endif
     doc["system"]["fw_version"] = FW_VERSION;
-  doc["system"]["fw_commit"] = FW_GIT_COMMIT;
-  doc["system"]["fw_build"] = FW_BUILD;
+    doc["system"]["fw_commit"] = FW_GIT_COMMIT;
+    doc["system"]["fw_build"] = FW_BUILD;
     doc["system"]["heap_free"] = ESP.getFreeHeap();
     doc["system"]["uptime_s"] = millis() / 1000UL;
     doc["system"]["temperature"] = (int)temperatureRead();
