@@ -1,0 +1,112 @@
+name: Firmware build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version without the v prefix, for example 1.2.0
+        required: false
+        type: string
+  pull_request:
+  push:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
+          fetch-depth: 0
+      - id: commit
+        name: Record build commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Prepare release version
+        if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
+        env:
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Release version must use major.minor.patch."
+            exit 1
+          }
+          git tag "v$VERSION"
+      - name: Build PlatformIO container
+        run: docker build --tag hp-remote-builder --file Containerfile .
+      - name: Build firmware
+        run: >-
+          docker run --rm
+          --volume "$GITHUB_WORKSPACE:/workspace"
+          --workdir /workspace
+          hp-remote-builder run -e xiao_esp32s3
+      - id: artifact
+        name: Set artifact name
+        run: echo "name=hp-remote-${{ steps.commit.outputs.sha }}" >> "$GITHUB_OUTPUT"
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: .pio/build/xiao_esp32s3/artifacts/
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: artifacts
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.release_version }}
+          COMMIT: ${{ needs.build.outputs.commit }}
+        run: gh release create "v$VERSION" artifacts/*.bin --target "$COMMIT" --generate-notes
+
+  pages:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: artifacts
+      # Der Web-Installer lädt die Firmware per fetch(); GitHub-Release-Downloads
+      # liefern keine CORS-Header, daher muss die Datei auf derselben Origin liegen.
+      - name: Assemble web installer
+        env:
+          VERSION: ${{ inputs.release_version }}
+        run: |
+          mkdir site
+          cp -r docs/. site/
+          cp artifacts/HP-Remote-merged.bin site/
+          jq --arg version "$VERSION" '.version = $version' docs/manifest.json > site/manifest.json
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5

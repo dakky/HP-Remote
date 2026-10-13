@@ -1,6 +1,6 @@
 {
   "name": "HP-Remote",
-  "version": "1.0.0",
+  "version": "latest",
   "builds": [
     {
       "chipFamily": "ESP32-S3",

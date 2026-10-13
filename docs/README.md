@@ -79,18 +79,16 @@ HP-Remote/
 │   ├── wifi_manager.cpp/.h       ← WiFi + AP-Setup
 │   ├── ota_service.cpp/.h        ← OTA
 │   └── debug_log.h               ← Log-Makros
-├── docs/                          ← Dokumentation + kompilierte Binaries
+├── docs/                          ← Dokumentation + Web-Installer
 │   ├── HARDWARE.md                ← Hardware & Montage
 │   ├── SETUP.md                   ← Inbetriebnahme & Konfiguration
 │   ├── DEBUG.md                   ← Test & Debugging
 │   ├── MQTT-EXAMPLES.md           ← MQTT-Steuerung ohne Home Assistant
-│   ├── images/                    ← Bilder für die Doku
-│   ├── HP-Remote-merged.bin       ← Erstinstallation (USB, alle Partitionen)
-│   └── HP-Remote-OTA.bin          ← OTA-Update (nur Applikation)
+│   └── images/                    ← Bilder für die Doku
 ├── platformio.ini                ← Board: esp32-s3-devkitc-1, qio_opi PSRAM
 ├── partitions_ota.csv            ← OTA-Partitionstabelle
 ├── version_build.py              ← injiziert FW_VERSION + FW_BUILD
-├── merge_bin.py                  ← erzeugt HP-Remote-OTA.bin + HP-Remote-merged.bin
+├── merge_bin.py                  ← erzeugt Firmware-Artefakte unter .pio/build/
 └── README.md                     ← Übersicht (dieses Dokument)
 ```
 
