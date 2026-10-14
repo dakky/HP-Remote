@@ -14,6 +14,7 @@ bool cameraStart(const AppConfig &cfg);
 camera_fb_t* cameraCapture();
 camera_fb_t* cameraCaptureFast();   // Schnell, ohne Dummy-Drop – für Stream
 void cameraRelease(camera_fb_t *fb);
+void cameraPrepareFrame(camera_fb_t *fb, const AppConfig &cfg);   // Feinrotation etc. vor jeder Nutzung
 bool cameraToJpeg(camera_fb_t *fb, int quality, uint8_t **jpg_buf, size_t *jpg_len);
 bool cameraToJpegScaled(camera_fb_t *fb, int quality, uint8_t **jpg_buf, size_t *jpg_len);
 

@@ -560,6 +560,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       server.send(500, "text/plain", "capture failed");
       return;
     }
+    cameraPrepareFrame(fb, cfg);
 
     uint8_t *jpg_buf = nullptr;
     size_t jpg_len = 0;
@@ -593,6 +594,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       server.send(503, "text/plain", "capture failed");
       return;
     }
+    cameraPrepareFrame(fb, cfg);
 
     uint8_t *jpg_buf = nullptr;
     size_t jpg_len = 0;
@@ -629,6 +631,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       return;
     }
 
+    cameraPrepareFrame(fb, cfg);
     String out = evaluateCurrent(fb, cfg);
     cameraRelease(fb);
 
