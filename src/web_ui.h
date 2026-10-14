@@ -1169,6 +1169,8 @@ const state = {
   config:null,
   selected:null,
   zoom:1,
+  deviceRotation:0,   // Feinrotation, die das Gerät aktuell auf Snapshots anwendet
+  snapRotation:0,     // Feinrotation, die im angezeigten Snapshot bereits enthalten ist
   selectedSegIdx:-1,
   drag:{
     active:false,
@@ -1451,6 +1453,7 @@ async function loadStatus(){
 
 async function loadConfig(){
   state.config = await api('/api/config');
+  state.deviceRotation = state.config?.camera?.fine_rotation ?? 0;
   try { fillPanels(); } catch(e) { console.warn('fillPanels:', e); }
   try { renderList(); } catch(e) { console.warn('renderList:', e); }
 }
@@ -1461,6 +1464,7 @@ async function loadSnapshot(){
   setButtonBusy('btnSnapshot', true, 'Loading...');
 
   try {
+    state.snapRotation = state.deviceRotation;
     img.src = '/api/snapshot?t=' + Date.now();
 
     await new Promise((res, rej) => {
@@ -1468,6 +1472,7 @@ async function loadSnapshot(){
       img.onerror = rej;
     });
 
+    applyPreviewRotation(parseFloat(document.getElementById('cam_fine_rotation').value) || 0);
     applyZoom();
     draw();
 
@@ -1783,6 +1788,7 @@ async function saveConfigDirect(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(state.config)
     });
+    if (res.ok) state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
     setButtonBusy('btnSave', false);
     flashButtonState('btnSave', !!res.ok, '✓ Saved', '✕ Error');
   } catch (e) {
@@ -2806,6 +2812,7 @@ async function saveConfig(){
     });
 
     setOutText(JSON.stringify(res, null, 2));
+    if (res.ok) state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
 
     setButtonBusy('btnSave', false);
     flashButtonState('btnSave', !!res.ok, '✓ Saved', '✕ Error');
@@ -2900,6 +2907,7 @@ async function testEval(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(state.config)
     });
+    state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
 
     setOutText(JSON.stringify(res, null, 2));
 
@@ -2953,11 +2961,12 @@ function installMouseEditing(){
 })();
 
 function applyPreviewRotation(deg){
-  // Nur das Kamerabild drehen – das Overlay-Canvas (ROI-Rahmen/Segmente)
-  // bleibt unrotiert, damit die ROIs an fester Bildposition bleiben.
+  // Der Snapshot kommt bereits gedreht vom Gerät. Hier nur die Differenz zum
+  // noch nicht übernommenen Reglerwert als Vorschau drehen – das Overlay-Canvas
+  // (ROI-Rahmen/Segmente) bleibt unrotiert, damit die ROIs an fester Bildposition bleiben.
   const img = document.getElementById('snap');
   if (img) {
-    img.style.transform = 'rotate(' + (deg || 0) + 'deg)';
+    img.style.transform = 'rotate(' + ((deg || 0) - state.snapRotation) + 'deg)';
     img.style.transformOrigin = 'center center';
   }
 }

@@ -1,6 +1,8 @@
 #include "camera_service.h"
 #include "img_converters.h"
 #include "debug_log.h"
+#include "esp_heap_caps.h"
+#include <math.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -231,6 +233,49 @@ camera_fb_t* cameraCaptureFast() {
 
 void cameraRelease(camera_fb_t *fb) {
   if (fb) esp_camera_fb_return(fb);
+}
+
+// Rotiert einen GRAYSCALE-Framebuffer in-place um den Bildmittelpunkt.
+// Kleinwinklig (±5°), Rückwärts-Sampling (Nearest-Neighbor) in temporären Puffer.
+static void rotateGrayscaleFb(camera_fb_t *fb, float deg) {
+  if (!fb || fb->format != PIXFORMAT_GRAYSCALE) return;
+  if (deg > -0.05f && deg < 0.05f) return;   // unter 0.05° nicht lohnenswert
+
+  const int W = fb->width;
+  const int H = fb->height;
+  uint8_t *src = (uint8_t*)heap_caps_malloc(W * H, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!src) src = (uint8_t*)malloc(W * H);
+  if (!src) return;
+  memcpy(src, fb->buf, W * H);
+
+  const float rad = deg * 3.14159265f / 180.0f;
+  const float cs = cosf(rad);
+  const float sn = sinf(rad);
+  const float cx = W / 2.0f;
+  const float cy = H / 2.0f;
+
+  for (int y = 0; y < H; y++) {
+    const float dy = y - cy;
+    for (int x = 0; x < W; x++) {
+      const float dx = x - cx;
+      // Rückwärts: Quellposition für Zielpixel (x,y)
+      int sx = (int)(cx + dx * cs + dy * sn + 0.5f);
+      int sy = (int)(cy - dx * sn + dy * cs + 0.5f);
+      uint8_t val = 128;   // Rand = neutralgrau
+      if (sx >= 0 && sx < W && sy >= 0 && sy < H)
+        val = src[sy * W + sx];
+      fb->buf[y * W + x] = val;
+    }
+  }
+  free(src);
+}
+
+// Gemeinsame Bildvorbereitung für alle Stellen, die ein Kamerabild nutzen
+// (Auswerte-Loop, MQTT-Bild, Test Detection, Snapshot, Preview), damit überall
+// dasselbe Bild ausgewertet bzw. angezeigt wird. Aktuell: manuelle Feinrotation.
+// Der MJPEG-Live-Stream wird nicht vorbereitet, er wird im Browser gedreht.
+void cameraPrepareFrame(camera_fb_t *fb, const AppConfig &cfg) {
+  rotateGrayscaleFb(fb, cfg.camera.fine_rotation);
 }
 
 bool cameraToJpeg(camera_fb_t *fb, int quality, uint8_t **jpg_buf, size_t *jpg_len) {
