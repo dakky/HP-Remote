@@ -13,6 +13,7 @@ Exposure 200, Gain 5. Abgelegt als verlustfreies 8-bit-Graustufen-PNG.
 | `shift_up.png`      | nach oben verschoben              | fehlgeschlagen            |
 | `shift_up_side.png` | nach oben und seitlich verschoben | fehlgeschlagen            |
 | `shift_side.png`    | nur seitlich verschoben           | fehlgeschlagen            |
+| `shift_side_rot.png` | nach Wiedereinbau: ca. 10 px seitlich, ca. −0,8° gedreht | teilweise (Set Temp ok, Water Temp/Uhrzeit nicht) |
 
 Drehung, Maßstab und ein Bild ohne Ankerlinien werden in den Tests synthetisch
 aus `ref.png` erzeugt.
