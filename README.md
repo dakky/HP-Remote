@@ -66,6 +66,7 @@ Die ausführliche Dokumentation ist in vier Bereiche aufgeteilt:
 | **[Hardware & Montage](docs/HARDWARE.md)** | Board, Touch-PCB, Pinouts, Schaltungsprinzip, Aufbau & Montage |
 | **[Inbetriebnahme & Konfiguration](docs/SETUP.md)** | Flashen, WLAN/MQTT, ROIs einrichten, MQTT-API (inkl. Solltemperatur- & Uhrzeit-Closed-Loop mit `auto`), Home Assistant |
 | **[Test & Debugging](docs/DEBUG.md)** | I2C-Scan, Multimeter-Test, OCR-Diagnose (Test Detection), REST-API |
+| **[Entwicklung](docs/DEVELOPMENT.md)** | Firmware bauen, Host-Tests ausführen und schreiben |
 | **[MQTT ohne Home Assistant](docs/MQTT-EXAMPLES.md)** | Direkte Steuerung per CLI, MQTT-Tools, Cron & Node-RED |
 
 ---
@@ -100,7 +101,7 @@ Für Podman wird `docker` durch `podman` ersetzt.
 ### Host-Tests
 
 Reine C++-Module der Firmware werden mit g++ auf dem PC getestet, ohne
-ESP32-Toolchain (Details in [tests/README.md](tests/README.md)):
+ESP32-Toolchain (Details in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)):
 
 ```sh
 make -C tests
@@ -149,6 +150,7 @@ HP-Remote/
 │   ├── HARDWARE.md                ← Hardware & Montage
 │   ├── SETUP.md                   ← Inbetriebnahme & Konfiguration
 │   ├── DEBUG.md                   ← Test & Debugging
+│   ├── DEVELOPMENT.md             ← Firmware bauen, Host-Tests
 │   ├── MQTT-EXAMPLES.md           ← MQTT-Steuerung ohne Home Assistant
 │   └── images/                    ← Bilder für die Doku
 ├── tests/                         ← Host-Tests (g++) + Testbilder vom Gerät
