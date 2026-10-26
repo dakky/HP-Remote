@@ -97,6 +97,15 @@ docker run --rm -v "$PWD:/workspace" -w /workspace hp-remote-builder run -e xiao
 
 Für Podman wird `docker` durch `podman` ersetzt.
 
+### Host-Tests
+
+Reine C++-Module der Firmware werden mit g++ auf dem PC getestet, ohne
+ESP32-Toolchain (Details in [tests/README.md](tests/README.md)):
+
+```sh
+make -C tests
+```
+
 ---
 
 ## Release erstellen
@@ -142,6 +151,7 @@ HP-Remote/
 │   ├── DEBUG.md                   ← Test & Debugging
 │   ├── MQTT-EXAMPLES.md           ← MQTT-Steuerung ohne Home Assistant
 │   └── images/                    ← Bilder für die Doku
+├── tests/                         ← Host-Tests (g++) + Testbilder vom Gerät
 ├── platformio.ini                ← Board: esp32-s3-devkitc-1, qio_opi PSRAM
 ├── partitions_ota.csv            ← OTA-Partitionstabelle
 ├── version_build.py              ← injiziert FW_VERSION + FW_BUILD
