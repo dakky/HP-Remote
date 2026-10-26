@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues in the fork `dakky/HP-Remote`. Use the `gh` CLI for all operations and always pass `-R dakky/HP-Remote` (in a fork, `gh` may otherwise default to upstream).
+Issues and specs for this repo live as GitHub issues in `dakky/HP-Remote`. Use the `gh` CLI for all operations and always pass `-R dakky/HP-Remote`.
 
 ## Conventions
 
@@ -11,7 +11,7 @@ Issues and specs for this repo live as GitHub issues in the fork `dakky/HP-Remot
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Do not rely on `gh` inferring the repo from `git remote -v`: this clone has an `upstream` remote, so always pass `-R dakky/HP-Remote`.
+Do not rely on `gh` inferring the repo: the GitHub repo is still a fork of `DocBigs-Lab/HP-Remote`, so `gh` may default to that repo. Always pass `-R dakky/HP-Remote`.
 
 ## Pull requests as a triage surface
 
@@ -25,30 +25,14 @@ When set to `yes`, PRs run through the same labels and states as issues, using t
 
 GitHub shares one number space across issues and PRs, so a bare `#42` may be either: resolve with `gh pr view 42` and fall back to `gh issue view 42`.
 
-## Fork-Konventionen
+## Feature-Arbeit
 
-Dieses Repo ist ein Fork von DocBigs-Lab/HP-Remote. Agents schreiben nie ins
-upstream-Repo (keine Issues, PRs oder Kommentare); das macht der Nutzer selbst.
+Das Projekt wird eigenständig entwickelt; Agents schreiben nie in
+`DocBigs-Lab/HP-Remote` (keine Issues, PRs oder Kommentare).
 
-### Feature-Arbeit
-
-- Die Spec eines Features (aus `/to-spec`) ist ein **Epic**-Issue im Fork.
+- Die Spec eines Features (aus `/to-spec`) ist ein **Epic**-Issue.
 - Tickets aus `/to-tickets` sind **Sub-Issues** des Epics, mit nativen
   Blocking-Abhängigkeiten untereinander (siehe Wayfinding operations).
-
-### Upstream-Reminder-Issue
-
-Pro Feature(-Set) gibt es ein Reminder-Issue im Fork (Beispiel: #2), das die
-Kommunikation mit dem upstream-Maintainer vorbereitet:
-
-- Body: was upstream noch anzulegen ist, als Checkliste
-  (upstream-Issues, dann 1–n PRs in Reihenfolge, mit Branch je PR).
-- Kommentare: je ein fertiger Textvorschlag pro upstream-Issue bzw. PR
-  (Titel + Beschreibung), sobald der zugehörige Branch fertig ist.
-- Upstream-Referenzen nur als Text oder im Codeblock
-  (`DocBigs-Lab/HP-Remote#1`), nie als Link oder `#n`, damit beim
-  Maintainer keine Querverweise entstehen.
-- Das Epic verlinkt sein Reminder-Issue und umgekehrt.
 - Keine KI-Attribution in Issue-, PR- oder Commit-Texten.
 
 ## When a skill says "publish to the issue tracker"

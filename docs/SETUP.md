@@ -8,7 +8,7 @@
 
 Firmware direkt im Browser flashen – kein Tool, keine Toolchain nötig:
 
-👉 **[Web Installer starten](https://docbigs-lab.github.io/HP-Remote/)**
+👉 **[Web Installer starten](https://dakky.github.io/HP-Remote/)**
 
 ESP32-S3-CAM per USB anschließen, auf „Install" klicken, fertig. Funktioniert in **Chrome** oder **Edge** (Web Serial). Danach weiter bei [WLAN einrichten](#3-wlan-einrichten).
 
@@ -28,7 +28,7 @@ tar -xzf HP-Remote.tar.gz
 platformio run --environment xiao_esp32s3 --target upload
 ```
 
-Alternativ – ohne selbst zu kompilieren – die Datei `HP-Remote-merged.bin` aus dem aktuellen [GitHub Release](https://github.com/DocBigs-Lab/HP-Remote/releases/latest) per esptool an Adresse `0x0` flashen (enthält Bootloader, Partitionstabelle und Applikation).
+Alternativ – ohne selbst zu kompilieren – die Datei `HP-Remote-merged.bin` aus dem aktuellen [GitHub Release](https://github.com/dakky/HP-Remote/releases/latest) per esptool an Adresse `0x0` flashen (enthält Bootloader, Partitionstabelle und Applikation).
 
 ### 3. WLAN einrichten
 
@@ -57,7 +57,7 @@ Sobald der ESP im Heimnetz hängt, das Webinterface unter seiner neuen IP (oder 
 Nach der Ersteinrichtung lassen sich Firmware-Updates bequem über das Webinterface einspielen – kein USB-Kabel nötig:
 
 1. Im Browser das Gerät öffnen (`http://<IP>/`) und die Sektion **OTA Update** aufklappen.
-2. Die Datei `HP-Remote-OTA.bin` aus dem aktuellen [GitHub Release](https://github.com/DocBigs-Lab/HP-Remote/releases/latest) auswählen und hochladen.
+2. Die Datei `HP-Remote-OTA.bin` aus dem aktuellen [GitHub Release](https://github.com/dakky/HP-Remote/releases/latest) auswählen und hochladen.
 3. Das Gerät flasht und startet selbstständig neu. Nach dem Reboot zeigt der Boot-Log die neue Build-Nummer (`Build: …`).
 
 Alternativ per Kommandozeile:

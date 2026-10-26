@@ -53,7 +53,7 @@ Die ausführliche Dokumentation ist in vier Bereiche aufgeteilt:
 
 Firmware direkt im Browser flashen – kein Tool erforderlich:
 
-👉 **[Web Installer starten](https://docbigs-lab.github.io/HP-Remote/)**
+👉 **[Web Installer starten](https://dakky.github.io/HP-Remote/)**
 
 ESP32-S3-CAM per USB anschließen, „Install" klicken (Chrome / Edge).
 

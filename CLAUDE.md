@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-GitHub Issues im Fork dakky/HP-Remote, nie upstream; pro Feature ein Epic mit Sub-Issues plus ein Upstream-Reminder-Issue. See `docs/agents/issue-tracker.md`.
+GitHub Issues in dakky/HP-Remote; pro Feature ein Epic mit Sub-Issues. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
@@ -11,3 +11,7 @@ Standard-Labels (needs-triage, needs-info, ready-for-agent, ready-for-human, won
 ### Domain docs
 
 Single-context. See `docs/agents/domain.md`.
+
+## Branches
+
+`main` ist Entwicklungs- und Release-Branch. Feature-Branches (`feature/…`, `fix/…`, `chore/…`) gehen von `main` ab und werden nach `main` gemergt. Releases baut der Workflow `build.yml` per Run workflow aus `main`.

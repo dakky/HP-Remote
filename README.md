@@ -4,12 +4,12 @@
 
 # DocBigsLab – HP-Remote
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DocBigs-Lab/HP-Remote/blob/main/LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/dakky/HP-Remote/blob/main/LICENSE)
 [![Platform: ESP32-S3](https://img.shields.io/badge/platform-ESP32--S3-blue.svg)](https://www.espressif.com/en/products/socs/esp32-s3)
 [![Framework: Arduino](https://img.shields.io/badge/framework-Arduino%20%2F%20PlatformIO-00979D.svg)](https://platformio.org/)
 [![MQTT](https://img.shields.io/badge/protocol-MQTT-660066.svg)](docs/MQTT-EXAMPLES.md)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Auto--Discovery-41BDF5.svg)](docs/SETUP.md)
-[![GitHub last commit](https://img.shields.io/github/last-commit/DocBigs-Lab/HP-Remote)](https://github.com/DocBigs-Lab/HP-Remote/commits/main)
+[![GitHub last commit](https://img.shields.io/github/last-commit/dakky/HP-Remote)](https://github.com/dakky/HP-Remote/commits/main)
 
 **Vollständige bidirektionale Fernsteuerung für Bosch / Buderus Brauchwasser-Wärmepumpen**
 
@@ -18,6 +18,8 @@
 Ein ESP32-S3-CAM liest das selbstleuchtende 7-Segment-Display optisch aus **und** simuliert alle 6 kapazitiven Fronttasten über eine PCB mit I2C-Touch-Interface. Dank Rückkopplung von OCR und Tastensteuerung lassen sich **Solltemperatur und Uhrzeit verifiziert einstellen** – auf Wunsch vollautomatisch durch Tastensperre und Standby hindurch. Die Anbindung läuft universell über **MQTT** – Messwerte und Tastensteuerung sind so in jede MQTT-fähige Umgebung integrierbar. Für Home Assistant gibt es zusätzlich **MQTT Auto-Discovery**, sodass alle Sensoren und Tasten dort ohne manuelle Konfiguration erscheinen.
 
 Basiert auf dem [ESP32-Display-Reader](https://github.com/DocBig/ESP32-Display-Reader) von DocBig, portiert auf den ESP32-S3-CAM und um I2C Touch-Steuerung erweitert.
+
+> **Über dieses Repository:** HP-Remote ist von [DocBigs-Lab/HP-Remote](https://github.com/DocBigs-Lab/HP-Remote) ausgegangen und wird hier eigenständig weiterentwickelt, unter anderem mit reproduzierbaren Builds und GitHub Releases. Herzlichen Dank an DocBig für die hervorragende Vorarbeit: Hardware, Firmware, Web-UI und Web-Installer aus dem DocBigs Lab sind die Grundlage für alles, was hier entsteht.
 
 ---
 
@@ -72,7 +74,7 @@ Die ausführliche Dokumentation ist in vier Bereiche aufgeteilt:
 
 Firmware direkt im Browser flashen – kein Tool erforderlich:
 
-👉 **[Web Installer starten](https://docbigs-lab.github.io/HP-Remote/)**
+👉 **[Web Installer starten](https://dakky.github.io/HP-Remote/)**
 
 ESP32-S3-CAM per USB anschließen, „Install" klicken (Chrome / Edge).
 
@@ -101,7 +103,7 @@ Für Podman wird `docker` durch `podman` ersetzt.
 
 In GitHub Actions **Firmware build > Run workflow** starten und die
 Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow baut
-den aktuellen `release`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
+den aktuellen `main`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
 GitHub Release.
 
 Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`.
