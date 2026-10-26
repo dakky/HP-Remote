@@ -16,6 +16,26 @@ TEST(loadGray_liest_Snapshot_als_Graustufenpuffer) {
   CHECK(img.at(799, 599) == 0);
 }
 
+// Ausschnitt aus ref.png als JPEG (wie ihn /api/snapshot liefert):
+//   magick ref.png -crop 200x150+300+225 +repage -colorspace Gray -quality 90 ref_crop.jpg
+// Erwartete Werte mit ImageMagick dekodiert; ±2 für Rundungsunterschiede der Decoder.
+TEST(loadGray_liest_JPEG_als_Graustufenpuffer) {
+  GrayImage img;
+  REQUIRE(loadGray(TEST_IMAGE_DIR "/ref_crop.jpg", img));
+  REQUIRE(img.width == 200);
+  REQUIRE(img.height == 150);
+  REQUIRE(img.pixels.size() == 200u * 150u);
+  CHECK_NEAR(img.at(0, 0), 60, 2);
+  CHECK_NEAR(img.at(100, 75), 255, 2);
+  CHECK_NEAR(img.at(50, 120), 25, 2);
+  CHECK_NEAR(img.at(199, 149), 1, 2);
+}
+
+TEST(loadGray_meldet_fehlende_Datei) {
+  GrayImage img;
+  CHECK(!loadGray(TEST_IMAGE_DIR "/gibt_es_nicht.png", img));
+}
+
 // Schwarzes Bild mit einem einzelnen hellen Punkt
 static GrayImage pointImage(int w, int h, int px, int py) {
   GrayImage img;

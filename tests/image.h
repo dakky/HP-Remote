@@ -31,5 +31,6 @@ struct Similarity {
 
 // Erzeugt ein künstlich verzerrtes Bild (bilinear abgetastet), z. B. als
 // "verrutschte Kamera" aus ref.png. Pixel, die außerhalb des Quellbilds
-// liegen, werden schwarz (0).
+// liegen, werden schwarz (0): Der Display-Hintergrund ist dunkel, ein grauer
+// Rand (wie bei rotateGrayscaleFb) würde eine falsche Kante erzeugen.
 GrayImage distort(const GrayImage &src, const Similarity &t);

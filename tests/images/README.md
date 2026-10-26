@@ -15,5 +15,8 @@ Exposure 200, Gain 5. Abgelegt als verlustfreies 8-bit-Graustufen-PNG.
 | `shift_side.png`    | nur seitlich verschoben           | fehlgeschlagen            |
 | `shift_side_rot.png` | nach Wiedereinbau: ca. 10 px seitlich, ca. −0,8° gedreht | teilweise (Set Temp ok, Water Temp/Uhrzeit nicht) |
 
+`ref_crop.jpg` ist ein kleiner JPEG-Ausschnitt aus `ref.png` (200×150 ab
+300,225, Qualität 90) und prüft nur, dass der Loader auch JPEG liest.
+
 Drehung, Maßstab und ein Bild ohne Ankerlinien werden in den Tests synthetisch
 aus `ref.png` erzeugt.
