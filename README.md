@@ -19,7 +19,7 @@ Ein ESP32-S3-CAM liest das selbstleuchtende 7-Segment-Display optisch aus **und*
 
 Basiert auf dem [ESP32-Display-Reader](https://github.com/DocBig/ESP32-Display-Reader) von DocBig, portiert auf den ESP32-S3-CAM und um I2C Touch-Steuerung erweitert.
 
-> **Über dieses Repository:** HP-Remote ist von [DocBigs-Lab/HP-Remote](https://github.com/DocBigs-Lab/HP-Remote) ausgegangen und wird hier eigenständig weiterentwickelt, unter anderem mit reproduzierbaren Builds und GitHub Releases. Herzlichen Dank an DocBig für die hervorragende Vorarbeit: Hardware, Firmware, Web-UI und Web-Installer aus dem DocBigs Lab sind die Grundlage für alles, was hier entsteht.
+> **Über dieses Repository:** HP-Remote ist von [DocBigs-Lab/HP-Remote](https://github.com/DocBigs-Lab/HP-Remote) ausgegangen und wird hier eigenständig weiterentwickelt, unter anderem mit reproduzierbaren Builds und GitHub Releases. Herzlichen Dank an DocBig für die hervorragende Vorarbeit: Hardware, Firmware, Web-UI und Web-Installer aus dem DocBigs Lab sind die Grundlage für alles, was hier entsteht. Hardware (z. B. die Touch-PCB) gibt es weiterhin über das [DocBigs Lab](https://docbigs-lab.de/); dieses Repository entwickelt nur die Software weiter und bietet selbst keine Hardware an.
 
 ---
 
