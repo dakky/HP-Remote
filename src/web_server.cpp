@@ -42,6 +42,20 @@ static uint16_t mqttBufferSizeForConfig(const AppConfig &cfg) {
   return cfg.mqtt.image_enabled ? MQTT_BUFFER_SIZE_WITH_IMAGE : MQTT_BUFFER_SIZE_DEFAULT;
 }
 
+static void anchorLinesToJson(JsonObject o, const AnchorLines &l) {
+  const struct { const char *name; const AnchorPoint &p; } points[] = {
+    {"top_left", l.top_left},
+    {"top_right", l.top_right},
+    {"bottom_left", l.bottom_left},
+    {"bottom_right", l.bottom_right},
+    {"vertical", l.vertical},
+  };
+  for (const auto &pt : points) {
+    o[pt.name]["x"] = pt.p.x;
+    o[pt.name]["y"] = pt.p.y;
+  }
+}
+
 
 // ── MJPEG Stream Server (Port 81) ────────────────────────────────────────────
 static WiFiServer mjpegServer(81);
@@ -341,6 +355,12 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 
     doc["stream"]["enabled"] = cfg.stream.enabled;
 
+    doc["align"]["enabled"] = cfg.camera.auto_align;
+    doc["align"]["reference_set"] = cfg.camera.align_ref_set;
+    if (cfg.camera.align_ref_set) {
+      anchorLinesToJson(doc["align"]["reference"].to<JsonObject>(), cfg.camera.align_ref);
+    }
+
     doc["room"]["enabled"] = cfg.room_sensor.enabled;
     doc["room"]["available"] = RoomSensorSht31.isAvailable();
     doc["room"]["temp_c"] = RoomSensorSht31.lastTempC();
@@ -636,6 +656,65 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     cameraRelease(fb);
 
     lastPayload = out;
+    server.send(200, "application/json", out);
+  });
+
+
+  // POST /api/align/reference – "Set Reference": misst die Ankerlinien im
+  // aktuellen Bild und speichert ihre Lage als Referenz für Auto Align.
+  // Nur bei ausgeschaltetem Auto Align: Gemessen wird dasselbe vorbereitete
+  // Bild (ggf. mit Feinrotation), auf dem die ROIs eingerichtet wurden.
+  // Bei Fehler bleibt die bisherige Referenz erhalten.
+  server.on("/api/align/reference", HTTP_POST, [&]() {
+    LOGI("HTTP POST /api/align/reference\n");
+
+    if (cfg.camera.auto_align) {
+      server.send(409, "application/json",
+                  "{\"ok\":false,\"error\":\"disable auto align before setting the reference\"}");
+      return;
+    }
+
+    camera_fb_t *fb = cameraCapture();
+    if (!fb) {
+      LOGE("capture failed in /api/align/reference\n");
+      server.send(500, "application/json", "{\"ok\":false,\"error\":\"capture failed\"}");
+      return;
+    }
+    cameraPrepareFrame(fb, cfg);
+
+    AnchorLines lines;
+    AnchorError err = measureAnchorLines(fb->buf, fb->width, fb->height, lines);
+    cameraRelease(fb);
+
+    if (err != AnchorError::None) {
+      LOGE("Set reference failed: %s\n", anchorErrorText(err));
+      JsonDocument doc;
+      doc["ok"] = false;
+      doc["error"] = anchorErrorText(err);
+      String out;
+      serializeJson(doc, out);
+      server.send(422, "application/json", out);
+      return;
+    }
+
+    AppConfig next = cfg;
+    next.camera.align_ref_set = true;
+    next.camera.align_ref = lines;
+    if (!saveConfigToFile(next)) {
+      LOGE("Set reference: failed to save config\n");
+      server.send(500, "application/json", "{\"ok\":false,\"error\":\"save failed\"}");
+      return;
+    }
+    cfg = next;
+
+    LOGI("Align reference set: top %.1f/%.1f bottom %.1f/%.1f vertical x=%.1f\n",
+         lines.top_left.y, lines.top_right.y, lines.bottom_left.y, lines.bottom_right.y, lines.vertical.x);
+
+    JsonDocument doc;
+    doc["ok"] = true;
+    anchorLinesToJson(doc["reference"].to<JsonObject>(), lines);
+    String out;
+    serializeJson(doc, out);
     server.send(200, "application/json", out);
   });
 

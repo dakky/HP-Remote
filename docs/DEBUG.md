@@ -83,6 +83,8 @@ Bei Symbolen mit Auto-Threshold wird zusätzlich der gemessene `contrast` und de
 | `/api/config/export` | GET | Config als `HP-Remote-config.json` |
 | `/api/config/import` | POST | Config importieren |
 | `/api/snapshot` | GET | Einzelbild (Graustufen-JPEG) |
+| `/api/status` | GET | Gerätestatus; Abschnitt `align`: Auto Align an/aus, Referenz gesetzt, Referenzlage der Ankerlinien |
+| `/api/align/reference` | POST | Set Reference: Ankerlinien messen und als Referenz für Auto Align speichern (nur bei ausgeschaltetem Auto Align; `409` wenn aktiv, `422` wenn nicht alle drei Linien gefunden werden – bisherige Referenz bleibt) |
 | `/api/test` | GET | Test Detection (OCR-Diagnose mit Debug) |
 | `/api/touch` | POST | Tastendruck: `button`/`count`/`duration` oder `combo`/`sequence` |
 | `/api/touch/hold` | POST | Port dauerhaft LOW (Multimeter-Test) |

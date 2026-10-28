@@ -79,6 +79,9 @@ void loadDefaultConfig(AppConfig &cfg) {
   cfg.camera.vflip = false;
   cfg.camera.hflip = false;
   cfg.camera.fine_rotation = 0.0f;
+  cfg.camera.auto_align = false;
+  cfg.camera.align_ref_set = false;
+  cfg.camera.align_ref = AnchorLines{};
   normalizeCameraFrame(cfg.camera);
 
   /* Light */
@@ -246,6 +249,18 @@ String configToJson(const AppConfig &cfg) {
   doc["camera"]["vflip"] = cfg.camera.vflip;
   doc["camera"]["hflip"] = cfg.camera.hflip;
   doc["camera"]["fine_rotation"] = cfg.camera.fine_rotation;
+  doc["camera"]["auto_align"] = cfg.camera.auto_align;
+  doc["camera"]["align_ref_set"] = cfg.camera.align_ref_set;
+  doc["camera"]["align_ref_top_left_x"] = cfg.camera.align_ref.top_left.x;
+  doc["camera"]["align_ref_top_left_y"] = cfg.camera.align_ref.top_left.y;
+  doc["camera"]["align_ref_top_right_x"] = cfg.camera.align_ref.top_right.x;
+  doc["camera"]["align_ref_top_right_y"] = cfg.camera.align_ref.top_right.y;
+  doc["camera"]["align_ref_bottom_left_x"] = cfg.camera.align_ref.bottom_left.x;
+  doc["camera"]["align_ref_bottom_left_y"] = cfg.camera.align_ref.bottom_left.y;
+  doc["camera"]["align_ref_bottom_right_x"] = cfg.camera.align_ref.bottom_right.x;
+  doc["camera"]["align_ref_bottom_right_y"] = cfg.camera.align_ref.bottom_right.y;
+  doc["camera"]["align_ref_vertical_x"] = cfg.camera.align_ref.vertical.x;
+  doc["camera"]["align_ref_vertical_y"] = cfg.camera.align_ref.vertical.y;
 
   /* Light */
 
@@ -355,6 +370,19 @@ bool configFromJson(const String &json, AppConfig &cfg) {
   next.camera.fine_rotation = doc["camera"]["fine_rotation"] | 0.0f;
   if (next.camera.fine_rotation < -5.0f) next.camera.fine_rotation = -5.0f;
   if (next.camera.fine_rotation >  5.0f) next.camera.fine_rotation =  5.0f;
+  // Fehlende Felder (ältere Configs ohne Auto Align) behalten den bisherigen Wert
+  next.camera.auto_align = doc["camera"]["auto_align"] | cfg.camera.auto_align;
+  next.camera.align_ref_set = doc["camera"]["align_ref_set"] | cfg.camera.align_ref_set;
+  next.camera.align_ref.top_left.x = doc["camera"]["align_ref_top_left_x"] | cfg.camera.align_ref.top_left.x;
+  next.camera.align_ref.top_left.y = doc["camera"]["align_ref_top_left_y"] | cfg.camera.align_ref.top_left.y;
+  next.camera.align_ref.top_right.x = doc["camera"]["align_ref_top_right_x"] | cfg.camera.align_ref.top_right.x;
+  next.camera.align_ref.top_right.y = doc["camera"]["align_ref_top_right_y"] | cfg.camera.align_ref.top_right.y;
+  next.camera.align_ref.bottom_left.x = doc["camera"]["align_ref_bottom_left_x"] | cfg.camera.align_ref.bottom_left.x;
+  next.camera.align_ref.bottom_left.y = doc["camera"]["align_ref_bottom_left_y"] | cfg.camera.align_ref.bottom_left.y;
+  next.camera.align_ref.bottom_right.x = doc["camera"]["align_ref_bottom_right_x"] | cfg.camera.align_ref.bottom_right.x;
+  next.camera.align_ref.bottom_right.y = doc["camera"]["align_ref_bottom_right_y"] | cfg.camera.align_ref.bottom_right.y;
+  next.camera.align_ref.vertical.x = doc["camera"]["align_ref_vertical_x"] | cfg.camera.align_ref.vertical.x;
+  next.camera.align_ref.vertical.y = doc["camera"]["align_ref_vertical_y"] | cfg.camera.align_ref.vertical.y;
   normalizeCameraFrame(next.camera);
 
   /* Light */

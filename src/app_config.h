@@ -4,6 +4,8 @@
 #include <ArduinoJson.h>
 #include <vector>
 
+#include "frame_align.h"
+
 struct WifiConfig {
   String ssid;
   String password;
@@ -31,6 +33,13 @@ struct CameraConfig {
   bool hflip;
 
   float fine_rotation;   // Feinjustage in Grad (-5.0 bis +5.0)
+
+  // Auto Align: Bild anhand der Ankerlinien des Displays auf die Referenzlage
+  // ausrichten. Die Referenz wird per "Set Reference" gemessen
+  // (POST /api/align/reference) und mit der Config gespeichert/exportiert.
+  bool auto_align;
+  bool align_ref_set;
+  AnchorLines align_ref;
 };
 
 struct MqttConfig {
