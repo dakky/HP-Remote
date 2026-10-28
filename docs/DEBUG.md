@@ -81,7 +81,7 @@ Bei Symbolen mit Auto-Threshold wird zusätzlich der gemessene `contrast` und de
 |---|---|---|
 | `/api/config` | GET / POST | Konfiguration lesen / schreiben |
 | `/api/config/export` | GET | Config als `HP-Remote-config.json` |
-| `/api/config/import` | POST | Config importieren |
+| `/api/config/import` | POST | Config importieren (ohne `align_ref_*`-Felder wird die Auto-Align-Referenz verworfen) |
 | `/api/snapshot` | GET | Einzelbild (Graustufen-JPEG) |
 | `/api/status` | GET | Gerätestatus; Abschnitt `align`: Auto Align an/aus, Referenz gesetzt, Referenzlage der Ankerlinien |
 | `/api/align/reference` | POST | Set Reference: Ankerlinien messen und als Referenz für Auto Align speichern (nur bei ausgeschaltetem Auto Align; `409` wenn aktiv, `422` wenn nicht alle drei Linien gefunden werden – bisherige Referenz bleibt) |

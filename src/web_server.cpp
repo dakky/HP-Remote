@@ -993,6 +993,11 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     }
     
     AppConfig newCfg = cfg;
+    // ROIs und Auto-Align-Referenz gehören zusammen: Enthält die importierte
+    // Config keine Referenz (ältere Export-Datei), wird die bisherige verworfen,
+    // statt sie neben fremden ROIs stehen zu lassen.
+    newCfg.camera.align_ref_set = false;
+    newCfg.camera.align_ref = AnchorLines{};
     if (!configFromJson(body, newCfg)) {
       LOGE("Import: invalid JSON or parse error\n");
       server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid json\"}");
