@@ -11,7 +11,7 @@ CXXFLAGS ?= -std=c++17 -O2 -g -Wall -Wextra
 CPPFLAGS += -I. -I../src -Ithird_party -DTEST_IMAGE_DIR='"$(CURDIR)/images"'
 
 BUILD_DIR     := build
-FIRMWARE_SRCS :=
+FIRMWARE_SRCS := ../src/frame_align.cpp
 TEST_SRCS     := $(wildcard *.cpp)
 OBJS          := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS) $(notdir $(FIRMWARE_SRCS))) \
                  $(BUILD_DIR)/stb_image.o
