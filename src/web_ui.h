@@ -463,6 +463,24 @@ progress{
   color:var(--muted);
   font-size:13px;
 }
+.alignHead{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.alignHead label{
+  margin:0;
+}
+.helpBtn{
+  padding:2px 9px;
+  border-radius:50%;
+}
+.alignHelp.hidden{
+  display:none;
+}
+#align_status.ok{color:#8cff4f}
+#align_status.fallback{color:#ffaa00}
+#align_ref_hint.err{color:#ff8080}
 .help{
   margin-top:8px;
   font-size:12px;
@@ -713,6 +731,23 @@ progress{
         </label>
         <div class="small">Fine adjustment of the camera angle (±5°). Affects live preview and OCR analysis.</div>
 
+        <div class="alignHead">
+          <label><input id="cam_auto_align" type="checkbox" onchange="onAutoAlignToggle()">Auto Align</label>
+          <button type="button" class="helpBtn" onclick="toggleAlignHelp()" title="How to use Auto Align">?</button>
+        </div>
+        <div id="align_help" class="help alignHelp hidden">
+          Auto Align finds the three anchor lines of the display (two horizontal lines, one vertical divider)
+          and moves, rotates and scales every image back to the reference position, so the ROIs keep fitting
+          after the camera has shifted slightly. Fine Rotation is ignored while Auto Align is on.<br>
+          1. Turn Auto Align off.<br>
+          2. Set up your ROIs on the snapshot.<br>
+          3. Click <b>Set Reference</b> (all three anchor lines must be visible).<br>
+          4. Turn Auto Align on.
+        </div>
+        <button id="btnAlignRef" type="button" onclick="setAlignReference()">Set Reference</button>
+        <div id="align_ref_hint" class="small"></div>
+        <div id="align_status" class="small">Auto Align: -</div>
+
         <label class="collapsibleToggle">
           <input id="stream_enabled" type="checkbox">
           <span>🎥 aktivate Live Stream</span>
@@ -852,6 +887,11 @@ progress{
         <label class="toolbarToggle">
           <input id="show_seg_overlay" type="checkbox" onchange="draw()">
           <span>Segments</span>
+        </label>
+
+        <label class="toolbarToggle" id="anchor_overlay_toggle" style="display:none">
+          <input id="show_anchor_overlay" type="checkbox" checked onchange="draw()">
+          <span>Anchor Lines</span>
         </label>
 
         <div class="toolbarBreak"></div>
@@ -1176,6 +1216,9 @@ const state = {
   zoom:1,
   deviceRotation:0,   // Feinrotation, die das Gerät aktuell auf Snapshots anwendet
   snapRotation:0,     // Feinrotation, die im angezeigten Snapshot bereits enthalten ist
+  align:null,         // Auto-Align-Abschnitt aus /api/status
+  alignFrame:null,    // Bildgröße zu align (Linien in Pixeln des Kamerabilds)
+  alignKey:'',
   selectedSegIdx:-1,
   drag:{
     active:false,
@@ -1430,6 +1473,8 @@ async function loadStatus(){
   setLed("led_cam", !!s.camera?.ok);
   setLed("led_room", !!s.room?.available);
 
+  setAlignStatus(s.align, s.camera);
+
   document.getElementById('st_room').textContent =
     s.room?.available ? 'Detected' : 'Not detected';
   document.getElementById('st_room_temp').textContent =
@@ -1462,7 +1507,7 @@ async function loadStatus(){
 
 async function loadConfig(){
   state.config = await api('/api/config');
-  state.deviceRotation = state.config?.camera?.fine_rotation ?? 0;
+  state.deviceRotation = deviceFineRotation(state.config?.camera);
   try { fillPanels(); } catch(e) { console.warn('fillPanels:', e); }
   try { renderList(); } catch(e) { console.warn('renderList:', e); }
 }
@@ -1797,12 +1842,14 @@ async function saveConfigDirect(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(state.config)
     });
-    if (res.ok) state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
+    if (res.ok) state.deviceRotation = deviceFineRotation(state.config.camera);
     setButtonBusy('btnSave', false);
     flashButtonState('btnSave', !!res.ok, '✓ Saved', '✕ Error');
+    return !!res.ok;
   } catch (e) {
     setButtonBusy('btnSave', false);
     flashButtonState('btnSave', false);
+    return false;
   }
 }
 
@@ -1829,8 +1876,10 @@ function fillPanels(){
     const fr = (state.config.camera.fine_rotation ?? 0);
     document.getElementById('cam_fine_rotation').value = fr;
     document.getElementById('cam_fine_rotation_val').textContent = Number(fr).toFixed(1);
+    document.getElementById('cam_auto_align').checked = !!state.config.camera.auto_align;
     applyPreviewRotation(fr);
   }
+  syncAlignControls();
   document.getElementById('cam_aec_value').value = state.config.camera.aec_value ?? 300;
   document.getElementById('cam_agc_gain').value = state.config.camera.agc_gain ?? 0;
 
@@ -1897,6 +1946,7 @@ function updatePanelsFromForm(){
   state.config.camera.vflip = document.getElementById('cam_vflip').checked;
   state.config.camera.hflip = document.getElementById('cam_hflip').checked;
   state.config.camera.fine_rotation = parseFloat(document.getElementById('cam_fine_rotation').value) || 0;
+  state.config.camera.auto_align = document.getElementById('cam_auto_align').checked;
   state.config.camera.aec_value = parseInt(document.getElementById('cam_aec_value').value || '300', 10);
   state.config.camera.agc_gain = parseInt(document.getElementById('cam_agc_gain').value || '0', 10);
 
@@ -2723,6 +2773,8 @@ function draw(){
       if (prof) _drawSegOverlayOnCtx(ctx, prof);
     }
   }
+
+  if (document.getElementById('show_anchor_overlay')?.checked) drawAnchorOverlay(ctx);
 }
 
 
@@ -2821,7 +2873,7 @@ async function saveConfig(){
     });
 
     setOutText(JSON.stringify(res, null, 2));
-    if (res.ok) state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
+    if (res.ok) state.deviceRotation = deviceFineRotation(state.config.camera);
 
     setButtonBusy('btnSave', false);
     flashButtonState('btnSave', !!res.ok, '✓ Saved', '✕ Error');
@@ -2916,7 +2968,7 @@ async function testEval(){
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(state.config)
     });
-    state.deviceRotation = state.config.camera?.fine_rotation ?? 0;
+    state.deviceRotation = deviceFineRotation(state.config.camera);
 
     setOutText(JSON.stringify(res, null, 2));
 
@@ -2974,6 +3026,7 @@ function applyPreviewRotation(deg){
   // noch nicht übernommenen Reglerwert als Vorschau drehen – das Overlay-Canvas
   // (ROI-Rahmen/Segmente) bleibt unrotiert, damit die ROIs an fester Bildposition bleiben.
   const img = document.getElementById('snap');
+  if (document.getElementById('cam_auto_align')?.checked) deg = 0;   // Feinrotation wird ignoriert
   if (img) {
     img.style.transform = 'rotate(' + ((deg || 0) - state.snapRotation) + 'deg)';
     img.style.transformOrigin = 'center center';
@@ -2984,6 +3037,179 @@ function onFineRotationInput(){
   const v = parseFloat(document.getElementById('cam_fine_rotation').value) || 0;
   document.getElementById('cam_fine_rotation_val').textContent = v.toFixed(1);
   applyPreviewRotation(v);
+}
+
+// ── Auto Align ─────────────────────────────────────────────────────────────
+
+// Feinrotation, die das Gerät auf Snapshots anwendet (bei Auto Align keine)
+function deviceFineRotation(cam){
+  return cam?.auto_align ? 0 : (cam?.fine_rotation ?? 0);
+}
+
+function toggleAlignHelp(){
+  document.getElementById('align_help').classList.toggle('hidden');
+}
+
+// Set Reference und Feinrotation sind nur bei ausgeschaltetem Auto Align bedienbar
+function syncAlignControls(){
+  const on = document.getElementById('cam_auto_align').checked;
+  const refSet = !!state.config?.camera?.align_ref_set;
+
+  const rot = document.getElementById('cam_fine_rotation');
+  rot.disabled = on;
+  rot.parentElement.style.opacity = on ? '0.55' : '1';
+  rot.title = on ? 'Ignored while Auto Align is on' : '';
+
+  document.getElementById('btnAlignRef').disabled = on;
+  const hint = document.getElementById('align_ref_hint');
+  hint.classList.remove('err');
+  hint.textContent = on
+    ? 'Turn Auto Align off to set a new reference.'
+    : (refSet ? 'Reference set. Set it again after changing the ROIs.' : 'No reference set yet.');
+
+  // Linien-Overlay erst anbieten, wenn es etwas zu zeigen gibt
+  document.getElementById('anchor_overlay_toggle').style.display = (on || refSet) ? '' : 'none';
+}
+
+async function onAutoAlignToggle(){
+  const cb = document.getElementById('cam_auto_align');
+  updatePanelsFromForm();
+  syncAlignControls();
+  // Sofort speichern: Set Reference und die Bildvorbereitung richten sich
+  // nach dem gespeicherten Schalter.
+  if (!(await saveConfigDirect())) {
+    cb.checked = !cb.checked;
+    updatePanelsFromForm();
+    syncAlignControls();
+    const hint = document.getElementById('align_ref_hint');
+    hint.classList.add('err');
+    hint.textContent = 'Saving Auto Align failed, please try again.';
+    return;
+  }
+  await loadStatus();
+  await loadSnapshot();
+}
+
+async function setAlignReference(){
+  const hint = document.getElementById('align_ref_hint');
+  setButtonBusy('btnAlignRef', true, 'Measuring...');
+  let res;
+  try {
+    res = await api('/api/align/reference', { method:'POST' });
+  } catch (e) {
+    res = { ok:false, error:String(e) };
+  }
+  setButtonBusy('btnAlignRef', false);
+  flashButtonState('btnAlignRef', !!res.ok, '✓ Reference set', '✕ Error');
+
+  if (!res.ok) {
+    hint.classList.add('err');
+    hint.textContent = 'Set Reference failed: ' + (res.error || 'unknown error');
+    return;
+  }
+
+  const cam = state.config.camera;
+  cam.align_ref_set = true;
+  for (const [name, p] of Object.entries(res.reference || {})) {
+    cam['align_ref_' + name + '_x'] = p.x;
+    cam['align_ref_' + name + '_y'] = p.y;
+  }
+  syncAlignControls();
+  draw();
+}
+
+// Statuszeile aus /api/status; neu zeichnen, wenn sich die Linien geändert haben
+function setAlignStatus(a, camera){
+  const el = document.getElementById('align_status');
+  el.classList.remove('ok','fallback');
+  if (!a || !a.enabled) {
+    el.textContent = 'Auto Align: off';
+  } else if (a.status === 'no_reference') {
+    el.textContent = 'Auto Align: no reference';
+  } else {
+    let text = 'Auto Align: ' + a.status;
+    if (a.scale != null) {
+      text += ` · shift ${a.dx.toFixed(1)} / ${a.dy.toFixed(1)} px`
+            + ` · angle ${a.angle_deg.toFixed(2)}°`
+            + ` · scale ${a.scale.toFixed(3)}`;
+    }
+    if (a.error) text += ` (${a.error})`;
+    el.textContent = text;
+    el.classList.add(a.status === 'ok' ? 'ok' : 'fallback');
+  }
+
+  const key = JSON.stringify(a || null);
+  if (key !== state.alignKey) {
+    state.alignKey = key;
+    state.align = a || null;
+    state.alignFrame = camera ? { w:camera.width, h:camera.height } : null;
+    draw();
+  }
+}
+
+function alignRefFromConfig(cam){
+  if (!cam?.align_ref_set) return null;
+  const pt = name => ({ x:cam['align_ref_' + name + '_x'], y:cam['align_ref_' + name + '_y'] });
+  return {
+    top_left:pt('top_left'), top_right:pt('top_right'),
+    bottom_left:pt('bottom_left'), bottom_right:pt('bottom_right'),
+    vertical:pt('vertical')
+  };
+}
+
+// Rohbild → ausgerichtetes Bild (Umkehrung der Transformation aus frame_align.h):
+//   q = c + R(−angle) · (p − c − d) / scale
+function alignedPoint(p, t, W, H){
+  const rad = -t.angle_deg * Math.PI / 180;
+  const cs = Math.cos(rad), sn = Math.sin(rad);
+  const x = (p.x - W / 2 - t.dx) / t.scale;
+  const y = (p.y - H / 2 - t.dy) / t.scale;
+  return { x: W / 2 + cs * x - sn * y, y: H / 2 + sn * x + cs * y };
+}
+
+// Drei Strecken aus den Messpunkten: obere, untere Linie und die senkrechte
+// Linie durch ihren Messpunkt, senkrecht zu den waagerechten Linien
+function anchorSegments(l){
+  const ux = (l.top_right.x - l.top_left.x) + (l.bottom_right.x - l.bottom_left.x);
+  const uy = (l.top_right.y - l.top_left.y) + (l.bottom_right.y - l.bottom_left.y);
+  const len = Math.hypot(ux, uy) || 1;
+  const nx = -uy / len, ny = ux / len;
+  const half = ((l.bottom_left.y + l.bottom_right.y) - (l.top_left.y + l.top_right.y)) / 4;
+  const v = l.vertical;
+  return [
+    [l.top_left, l.top_right],
+    [l.bottom_left, l.bottom_right],
+    [{ x:v.x - nx * half, y:v.y - ny * half }, { x:v.x + nx * half, y:v.y + ny * half }]
+  ];
+}
+
+function strokeAnchorLines(ctx, l, color, dash){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.setLineDash(dash);
+  anchorSegments(l).forEach(([p, q]) => {
+    ctx.beginPath();
+    ctx.moveTo(p.x * state.zoom, p.y * state.zoom);
+    ctx.lineTo(q.x * state.zoom, q.y * state.zoom);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+// Referenz gestrichelt, erkannte Linien (ins angezeigte, ausgerichtete Bild
+// umgerechnet) durchgezogen
+function drawAnchorOverlay(ctx){
+  const ref = alignRefFromConfig(state.config?.camera);
+  if (ref) strokeAnchorLines(ctx, ref, 'rgba(255,255,255,0.55)', [6, 4]);
+
+  const a = state.align;
+  const f = state.alignFrame;
+  if (!a?.enabled || !a.lines || a.scale == null || !f) return;
+  const t = { dx:a.dx, dy:a.dy, angle_deg:a.angle_deg, scale:a.scale };
+  const lines = {};
+  for (const [name, p] of Object.entries(a.lines)) lines[name] = alignedPoint(p, t, f.w, f.h);
+  strokeAnchorLines(ctx, lines, a.status === 'ok' ? 'rgba(255,0,255,0.8)' : 'rgba(255,170,0,0.8)', []);
 }
 
 function syncHaDiscoveryFields(){

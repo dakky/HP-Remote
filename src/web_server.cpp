@@ -174,6 +174,63 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       return;
     }
 
+    // Bei Auto Align richtet der Browser den Stream mit der zuletzt erkannten
+    // Transformation aus (CSS-Matrix, keine Last auf dem Gerät) und blendet die
+    // erkannten Ankerlinien ein. Sonst wie bisher die Feinrotation.
+    String streamHtml;
+    String alignCss;
+    String alignJs;
+    if (cfg.camera.auto_align) {
+      streamHtml =
+        "<div id='view'><img id='stream' alt='MJPEG Stream'>"
+        "<svg id='lines'><path id='lpath'/></svg></div>";
+      alignCss =
+        "#view{flex:1;position:relative;min-height:0;overflow:hidden}"
+        "#view #stream,#lines{position:absolute;inset:0;width:100%;height:100%}"
+        "#lines{pointer-events:none}"
+        "#lpath{fill:none;stroke-width:1;vector-effect:non-scaling-stroke;opacity:.6}";
+      alignJs =
+        "var AW=0,AH=0,AT=null,AL=null,AOK=false;"
+        // Drei Strecken aus den Messpunkten (Pixel des Kamerabilds wie in /api/status)
+        "function aseg(l){"
+          "var ux=l.top_right.x-l.top_left.x+l.bottom_right.x-l.bottom_left.x,"
+              "uy=l.top_right.y-l.top_left.y+l.bottom_right.y-l.bottom_left.y,"
+              "n=Math.hypot(ux,uy)||1,nx=-uy/n,ny=ux/n,"
+              "h=(l.bottom_left.y+l.bottom_right.y-l.top_left.y-l.top_right.y)/4,v=l.vertical;"
+          "function p(a){return a.x.toFixed(1)+' '+a.y.toFixed(1);}"
+          "return 'M'+p(l.top_left)+'L'+p(l.top_right)+'M'+p(l.bottom_left)+'L'+p(l.bottom_right)"
+            "+'M'+p({x:v.x-nx*h,y:v.y-ny*h})+'L'+p({x:v.x+nx*h,y:v.y+ny*h});"
+        "}"
+        // Rohbild → Referenzlage: rotate(-a) scale(1/s) translate(-d) um die
+        // Bildmitte; d in Bildschirm-Pixeln (k = Darstellungsmaßstab)
+        "function aview(){"
+          "if(!AW)return;"
+          "var img=document.getElementById('stream'),sv=document.getElementById('lines'),"
+              "lp=document.getElementById('lpath');"
+          "var k=Math.min(img.clientWidth/AW,img.clientHeight/AH),m='';"
+          "if(AT)m='rotate('+(-AT.angle_deg)+'deg) scale('+(1/AT.scale)+') translate('"
+            "+(-AT.dx*k)+'px,'+(-AT.dy*k)+'px)';"
+          "img.style.transform=m;sv.style.transform=m;"
+          "sv.setAttribute('viewBox','0 0 '+AW+' '+AH);"
+          "lp.setAttribute('d',AL?aseg(AL):'');"
+          "lp.setAttribute('stroke',AOK?'#f0f':'#fa0');"
+        "}"
+        "function aload(){"
+          "fetch('/api/status').then(function(r){return r.json();})"
+          ".then(function(s){"
+            "var a=s.align||{};"
+            "AW=s.camera.width;AH=s.camera.height;"
+            "AT=a.scale!=null?a:null;AL=a.lines||null;AOK=a.status=='ok';"
+            "aview();"
+          "}).catch(function(){});"
+        "}"
+        "aload();setInterval(aload,10000);"
+        "window.addEventListener('resize',aview);";
+    } else {
+      streamHtml = "<img id='stream' alt='MJPEG Stream' style='transform:rotate(" +
+                   String(cfg.camera.fine_rotation, 1) + "deg)'>";
+    }
+
     String html =
       "<!doctype html><html><head><meta charset='utf-8'>"
       "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -217,8 +274,9 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       "#status.busy{font-size:17px;color:#fd6;"
                   "animation:pulse 1s ease-in-out infinite}"
       "@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}"
+      + alignCss +
       "</style></head><body>"
-      "<img id='stream' alt='MJPEG Stream' style='transform:rotate(" + String(cfg.camera.fine_rotation, 1) + "deg)'>"
+      + streamHtml +
       "<div class='bar'>"
         "<div class='btns'>"
           "<div class='row row1'>"
@@ -260,6 +318,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       "</div>"
       "<script>"
       "document.getElementById('stream').src='http://'+location.hostname+':81';"
+      + alignJs +
       "function press(btn){"
         "var st=document.getElementById('status');"
         "st.textContent='...';"
