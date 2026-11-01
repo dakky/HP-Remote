@@ -1,6 +1,7 @@
 #include "frame_align.h"
 
 #include <math.h>
+#include <string.h>
 #include <vector>
 
 // ── Suchbereiche (Anteile der Bildgröße, gemessen am WPT-Display in Referenzlage)
@@ -171,4 +172,153 @@ const char *anchorErrorText(AnchorError err) {
     case AnchorError::Inconsistent: return "anchor lines found but do not fit together";
   }
   return "unknown error";
+}
+
+// ── Ausrichten ────────────────────────────────────────────────────────────
+
+static const float kDegToRad = 3.14159265f / 180.0f;
+
+// Plausibilitätsgrenzen: Größere Abweichungen gelten als Fehlerkennung.
+// Die Verschiebung ist für 640 px Breite angegeben und wird auf die
+// tatsächliche Breite umgerechnet.
+static const float kMaxShift640 = 40.0f;
+static const float kMaxAngleDeg = 5.0f;
+static const float kMinScale    = 0.9f;
+static const float kMaxScale    = 1.1f;
+
+static bool isPlausible(const AlignTransform &t, int W) {
+  const float maxShift = kMaxShift640 * W / 640.0f;
+  return fabsf(t.dx) <= maxShift && fabsf(t.dy) <= maxShift && fabsf(t.angle_deg) <= kMaxAngleDeg &&
+         t.scale >= kMinScale && t.scale <= kMaxScale;
+}
+
+// Lage des Displays aus den Ankerlinien: Steigung der waagerechten Linien,
+// senkrechter Abstand zwischen ihnen und ein fester Punkt (Schnitt der
+// senkrechten Linie mit der Mittellinie zwischen den waagerechten Linien).
+struct DisplayPose {
+  float slope;
+  float gap;
+  AnchorPoint center;
+};
+
+static DisplayPose poseFromLines(const AnchorLines &l) {
+  // Beide Linien werden in denselben Streifen gemessen (gleiche x-Stellen)
+  const float x0 = l.top_left.x;
+  const float x1 = l.top_right.x;
+  const float m0 = 0.5f * (l.top_left.y + l.bottom_left.y);
+  const float m1 = 0.5f * (l.top_right.y + l.bottom_right.y);
+  const float k = (m1 - m0) / (x1 - x0);
+  const float dy = 0.5f * ((l.bottom_left.y - l.top_left.y) + (l.bottom_right.y - l.top_right.y));
+  const float norm = sqrtf(1.0f + k * k);
+
+  // Senkrechte Linie steht rechtwinklig auf den waagerechten: Richtung (−k, 1).
+  // Schnitt mit der Mittellinie y = m0 + k·(x − x0):
+  //   V.y + t = m0 + k·(V.x − t·k − x0)
+  const AnchorPoint &v = l.vertical;
+  const float t = (m0 + k * (v.x - x0) - v.y) / (norm * norm);
+
+  DisplayPose p;
+  p.slope = k;
+  p.gap = dy / norm;
+  p.center = {v.x - t * k, v.y + t};
+  return p;
+}
+
+AlignResult estimateAlignment(const uint8_t *gray, int W, int H, const AnchorLines *ref,
+                              const AlignTransform &lastValid) {
+  AlignResult r = {};
+  r.transform = kAlignIdentity;
+  r.error = AnchorError::None;
+  if (!ref) {
+    r.status = AlignStatus::NoReference;
+    return r;
+  }
+
+  r.error = measureAnchorLines(gray, W, H, r.lines);
+  r.lines_found = r.error == AnchorError::None;
+  if (!r.lines_found) {
+    r.status = AlignStatus::Fallback;
+    r.transform = lastValid;
+    return r;
+  }
+
+  const DisplayPose pr = poseFromLines(*ref);
+  const DisplayPose pc = poseFromLines(r.lines);
+  const float rad = atanf(pc.slope) - atanf(pr.slope);
+  const float s = pc.gap / pr.gap;
+
+  // Verschiebung so, dass der Referenzpunkt auf den gemessenen Punkt fällt:
+  //   pc = c + s·R·(pr − c) + d
+  const float cx = W / 2.0f;
+  const float cy = H / 2.0f;
+  const float cs = cosf(rad);
+  const float sn = sinf(rad);
+  const float qx = pr.center.x - cx;
+  const float qy = pr.center.y - cy;
+
+  AlignTransform t;
+  t.angle_deg = rad / kDegToRad;
+  t.scale = s;
+  t.dx = pc.center.x - cx - s * (cs * qx - sn * qy);
+  t.dy = pc.center.y - cy - s * (sn * qx + cs * qy);
+
+  if (!isPlausible(t, W)) {
+    r.status = AlignStatus::Fallback;
+    r.transform = lastValid;
+    return r;
+  }
+  r.status = AlignStatus::Ok;
+  r.transform = t;
+  return r;
+}
+
+void applyAlignment(uint8_t *gray, int W, int H, const AlignTransform &t, uint8_t *scratch) {
+  if (!gray || !scratch || W <= 0 || H <= 0) return;
+  // Unter 0,05 px bzw. 0,05° nicht lohnenswert (wie die Feinrotation)
+  if (fabsf(t.dx) < 0.05f && fabsf(t.dy) < 0.05f && fabsf(t.angle_deg) < 0.05f &&
+      fabsf(t.scale - 1.0f) < 0.0001f)
+    return;
+
+  memcpy(scratch, gray, (size_t)W * H);
+
+  // Rückwärts: Zielpixel q (Referenzlage) holt sich das Quellpixel
+  //   p = c + s·R·(q − c) + d
+  // Entlang einer Zeile wächst p linear mit x → pro Pixel nur zwei Additionen.
+  const float rad = t.angle_deg * kDegToRad;
+  const float a = t.scale * cosf(rad);
+  const float b = t.scale * sinf(rad);
+  const float cx = W / 2.0f;
+  const float cy = H / 2.0f;
+
+  for (int y = 0; y < H; y++) {
+    const float qy = y - cy;
+    // + 0,5 für Runden beim Abschneiden; Quellpositionen < 0 fallen über
+    // den Bereichstest auf sx/sy ≥ 0 heraus
+    float sx = cx + t.dx + a * (-cx) - b * qy + 0.5f;
+    float sy = cy + t.dy + b * (-cx) + a * qy + 0.5f;
+    uint8_t *row = gray + y * W;
+    for (int x = 0; x < W; x++, sx += a, sy += b) {
+      uint8_t val = 0;
+      if (sx >= 0.0f && sy >= 0.0f) {
+        const int ix = (int)sx;
+        const int iy = (int)sy;
+        if (ix < W && iy < H) val = scratch[iy * W + ix];
+      }
+      row[x] = val;
+    }
+  }
+}
+
+const char *alignStatusText(AlignStatus status) {
+  switch (status) {
+    case AlignStatus::Ok:          return "ok";
+    case AlignStatus::Fallback:    return "fallback";
+    case AlignStatus::NoReference: return "no_reference";
+  }
+  return "unknown";
+}
+
+const char *alignFallbackText(const AlignResult &r) {
+  if (r.status != AlignStatus::Fallback) return nullptr;
+  return r.lines_found ? "anchor lines outside plausible range" : anchorErrorText(r.error);
 }

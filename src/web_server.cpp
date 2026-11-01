@@ -360,6 +360,31 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     if (cfg.camera.align_ref_set) {
       anchorLinesToJson(doc["align"]["reference"].to<JsonObject>(), cfg.camera.align_ref);
     }
+    {
+      // Ergebnis im zuletzt vorbereiteten Bild. Direkt nach dem Einschalten,
+      // vor dem ersten Bild, gilt noch die Identität.
+      const CameraAlignInfo &ai = cameraAlignInfo();
+      const char *status = "disabled";
+      if (cfg.camera.auto_align) {
+        if (ai.enabled) status = alignStatusText(ai.result.status);
+        else status = alignStatusText(cfg.camera.align_ref_set ? AlignStatus::Fallback : AlignStatus::NoReference);
+      }
+      doc["align"]["status"] = status;
+      if (cfg.camera.auto_align && ai.enabled) {
+        const AlignTransform &t = ai.result.transform;
+        doc["align"]["dx"] = t.dx;
+        doc["align"]["dy"] = t.dy;
+        doc["align"]["angle_deg"] = t.angle_deg;
+        doc["align"]["scale"] = t.scale;
+        doc["align"]["lines_found"] = ai.result.lines_found;
+        if (ai.result.lines_found) {
+          anchorLinesToJson(doc["align"]["lines"].to<JsonObject>(), ai.result.lines);
+        }
+        if (const char *reason = alignFallbackText(ai.result)) doc["align"]["error"] = reason;
+        doc["align"]["detect_ms"] = ai.detect_ms;
+        doc["align"]["align_ms"] = ai.align_ms;
+      }
+    }
 
     doc["room"]["enabled"] = cfg.room_sensor.enabled;
     doc["room"]["available"] = RoomSensorSht31.isAvailable();

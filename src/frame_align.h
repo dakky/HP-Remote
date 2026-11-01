@@ -40,3 +40,47 @@ AnchorError measureAnchorLines(const uint8_t *gray, int W, int H, AnchorLines &o
 
 // Kurzer englischer Text für API-Fehlermeldungen.
 const char *anchorErrorText(AnchorError err);
+
+// ── Ausrichten ────────────────────────────────────────────────────────────
+
+// Ähnlichkeitstransformation von der Referenzlage in das aktuelle Bild:
+// Ein Punkt p der Referenz liegt im Bild bei  c + scale · R(angle_deg) · (p − c) + (dx, dy),
+// c = Bildmitte. Positiver Winkel = im Uhrzeigersinn (wie die Feinrotation).
+struct AlignTransform {
+  float dx;
+  float dy;
+  float angle_deg;
+  float scale;
+};
+
+static constexpr AlignTransform kAlignIdentity = {0.0f, 0.0f, 0.0f, 1.0f};
+
+enum class AlignStatus {
+  Ok,            // Linien gemessen, Transformation plausibel
+  Fallback,      // Linien fehlen oder Ergebnis unplausibel: letzte gültige Transformation
+  NoReference,   // keine Referenz gesetzt: Bild bleibt unverändert
+};
+
+struct AlignResult {
+  AlignStatus status;
+  AlignTransform transform;   // anzuwendende Transformation
+  AnchorError error;          // Fehler der Linienmessung (None, wenn gemessen)
+  bool lines_found;           // lines gültig (auch bei unplausiblem Ergebnis)
+  AnchorLines lines;          // gemessene Ankerlinien im Rohbild
+};
+
+// Misst die Ankerlinien und bestimmt die Transformation gegenüber ref.
+// ref == nullptr → NoReference mit Identität. Linien fehlen oder Ergebnis
+// außerhalb der Plausibilitätsgrenzen → Fallback mit lastValid.
+AlignResult estimateAlignment(const uint8_t *gray, int W, int H, const AnchorLines *ref,
+                              const AlignTransform &lastValid);
+
+// Bringt das Bild in-place auf die Referenzlage (Nearest Neighbor).
+// scratch: Hilfspuffer mit W·H Bytes. Pixel außerhalb des Bilds werden
+// schwarz (dunkler Display-Hintergrund). Identität → keine Änderung.
+void applyAlignment(uint8_t *gray, int W, int H, const AlignTransform &t, uint8_t *scratch);
+
+const char *alignStatusText(AlignStatus status);
+
+// Grund für Fallback als kurzer englischer Text, sonst nullptr.
+const char *alignFallbackText(const AlignResult &r);

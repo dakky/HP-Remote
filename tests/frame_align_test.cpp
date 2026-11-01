@@ -214,3 +214,134 @@ TEST(measureAnchorLines_meldet_ungueltiges_Bild) {
   const uint8_t tiny[16] = {};
   CHECK(measureAnchorLines(tiny, 4, 4, l) == AnchorError::InvalidImage);
 }
+
+// ── Ausrichten (estimateAlignment + applyAlignment)
+
+// Erkennen und im Puffer ausrichten, wie cameraPrepareFrame es tut
+static AlignResult align(GrayImage &img, const AnchorLines *ref, const AlignTransform &lastValid) {
+  const AlignResult r = estimateAlignment(img.pixels.data(), img.width, img.height, ref, lastValid);
+  std::vector<uint8_t> scratch(img.pixels.size());
+  applyAlignment(img.pixels.data(), img.width, img.height, r.transform, scratch.data());
+  return r;
+}
+
+TEST(align_ohne_Referenz_laesst_Bild_unveraendert) {
+  GrayImage img = distort(loadRef(), Similarity{20, -15, 2, 1});
+  const std::vector<uint8_t> before = img.pixels;
+
+  const AlignResult r = align(img, nullptr, kAlignIdentity);
+
+  CHECK(r.status == AlignStatus::NoReference);
+  CHECK(r.transform.dx == 0 && r.transform.dy == 0 && r.transform.angle_deg == 0 && r.transform.scale == 1);
+  CHECK(img.pixels == before);
+}
+
+// Bekannte Verzerrung der Referenz (distort benutzt dieselbe Konvention wie
+// AlignTransform: Referenz → Bild) wird wiedergefunden.
+TEST(estimateAlignment_findet_kuenstliche_Verzerrung_wieder) {
+  const GrayImage ref = loadRef();
+  AnchorLines r;
+  REQUIRE(measure(ref, r) == AnchorError::None);
+
+  const Similarity cases[] = {
+      {0, 0, 0, 1},
+      {25, -30, 0, 1},
+      {0, 0, 3, 1},
+      {0, 0, 0, 1.07},
+      {-12, 18, -2.5, 0.94},
+      {40, 35, 4, 1.05},
+  };
+  for (const Similarity &t : cases) {
+    const GrayImage img = distort(ref, t);
+    const AlignResult a = estimateAlignment(img.pixels.data(), img.width, img.height, &r, kAlignIdentity);
+    REQUIRE(a.status == AlignStatus::Ok);
+    CHECK(a.lines_found);
+    CHECK_NEAR(a.transform.dx, t.dx, 1.0);
+    CHECK_NEAR(a.transform.dy, t.dy, 1.0);
+    CHECK_NEAR(a.transform.angle_deg, t.angle_deg, 0.15);
+    CHECK_NEAR(a.transform.scale, t.scale, 0.01);
+  }
+}
+
+// Echte Snapshots mit verrutschter Kamera: Nach dem Ausrichten liegen die
+// Ankerlinien wieder an der Referenzlage (gemessen auf dem ausgerichteten Bild).
+TEST(align_bringt_echte_verschobene_Snapshots_auf_die_Referenzlage) {
+  const GrayImage refImg = loadRef();
+  AnchorLines r;
+  REQUIRE(measure(refImg, r) == AnchorError::None);
+
+  for (const char *file : {"/shift_up.png", "/shift_up_side.png", "/shift_side.png", "/shift_side_rot.png"}) {
+    GrayImage img;
+    REQUIRE(loadGray((std::string(TEST_IMAGE_DIR) + file).c_str(), img));
+    const AlignResult a = align(img, &r, kAlignIdentity);
+    if (a.status != AlignStatus::Ok) printf("  %s: %s\n", file, anchorErrorText(a.error));
+    REQUIRE(a.status == AlignStatus::Ok);
+
+    AnchorLines m;
+    REQUIRE(measure(img, m) == AnchorError::None);
+    CHECK_NEAR(m.top_left.y, r.top_left.y, 2);
+    CHECK_NEAR(m.top_right.y, r.top_right.y, 2);
+    CHECK_NEAR(m.bottom_left.y, r.bottom_left.y, 2);
+    CHECK_NEAR(m.bottom_right.y, r.bottom_right.y, 2);
+    CHECK_NEAR(m.vertical.x, r.vertical.x, 2);
+  }
+}
+
+// Leeres oder verrauschtes Bild: keine Linien → letzte gültige Transformation
+TEST(estimateAlignment_faellt_bei_leerem_oder_verrauschtem_Bild_zurueck) {
+  AnchorLines r;
+  REQUIRE(measure(loadRef(), r) == AnchorError::None);
+
+  GrayImage black;
+  black.width = 800;
+  black.height = 600;
+  black.pixels.assign(800u * 600u, 0);
+
+  GrayImage noise = black;
+  uint32_t seed = 4711;
+  for (uint8_t &p : noise.pixels) {
+    seed = seed * 1664525u + 1013904223u;
+    p = (uint8_t)(seed >> 24);
+  }
+
+  const AlignTransform last = {12, -7, 1.5f, 1.03f};
+  for (const GrayImage *img : {&black, &noise}) {
+    const AlignResult a = estimateAlignment(img->pixels.data(), 800, 600, &r, last);
+    CHECK(a.status == AlignStatus::Fallback);
+    CHECK(!a.lines_found);
+    CHECK(a.error != AnchorError::None);
+    CHECK(a.transform.dx == 12 && a.transform.dy == -7 && a.transform.angle_deg == 1.5f &&
+          a.transform.scale == 1.03f);
+
+    // Ohne bisherige gültige Transformation: Identität
+    const AlignResult b = estimateAlignment(img->pixels.data(), 800, 600, &r, kAlignIdentity);
+    CHECK(b.status == AlignStatus::Fallback);
+    CHECK(b.transform.dx == 0 && b.transform.dy == 0 && b.transform.angle_deg == 0 && b.transform.scale == 1);
+  }
+}
+
+// Linien gefunden, aber Transformation außerhalb der Plausibilitätsgrenzen
+// (Verschiebung ±40 px bei 640×480 = ±50 px bei 800×600, Drehung ±5°,
+// Maßstab 0,9–1,1) → Fehlerkennung, letzte gültige Transformation
+TEST(estimateAlignment_verwirft_unplausible_Transformation) {
+  const GrayImage ref = loadRef();
+  AnchorLines r;
+  REQUIRE(measure(ref, r) == AnchorError::None);
+
+  const Similarity cases[] = {
+      {0, 65, 0, 1},
+      {-65, 0, 0, 1},
+      {0, 0, 5.6, 1},
+      {0, 0, 0, 1.14},
+      {0, 0, 0, 0.86},
+  };
+  const AlignTransform last = {3, 4, -0.5f, 1.01f};
+  for (const Similarity &t : cases) {
+    const GrayImage img = distort(ref, t);
+    const AlignResult a = estimateAlignment(img.pixels.data(), img.width, img.height, &r, last);
+    if (!a.lines_found) printf("  dx=%g dy=%g a=%g s=%g: %s\n", t.dx, t.dy, t.angle_deg, t.scale, anchorErrorText(a.error));
+    REQUIRE(a.lines_found);
+    CHECK(a.status == AlignStatus::Fallback);
+    CHECK(a.transform.dx == 3 && a.transform.dy == 4 && a.transform.angle_deg == -0.5f && a.transform.scale == 1.01f);
+  }
+}

@@ -10,6 +10,14 @@ static bool g_cameraHealthy = false;
 static unsigned long g_captureFailureCount = 0;
 static AppConfig g_lastCfg;
 
+// Auto Align: letztes Ergebnis und letzte gültige Transformation (nicht
+// persistent). g_alignRef merkt sich die Referenz, zu der g_alignLastValid
+// gehört; ändert sich die Referenz, gilt wieder die Identität.
+static const CameraAlignInfo kAlignInfoOff = {false, {AlignStatus::Fallback, kAlignIdentity, AnchorError::None, false, {}}, 0, 0};
+static CameraAlignInfo g_alignInfo = kAlignInfoOff;
+static AlignTransform g_alignLastValid = kAlignIdentity;
+static AnchorLines g_alignRef = {};
+
 static framesize_t cameraFrameSizeFromConfig(const AppConfig &cfg, int &resolvedW, int &resolvedH) {
   if (cfg.camera.width == 160 && cfg.camera.height == 120) {
     resolvedW = 160;
@@ -270,12 +278,61 @@ static void rotateGrayscaleFb(camera_fb_t *fb, float deg) {
   free(src);
 }
 
+// Auto Align: Ankerlinien messen, Transformation bestimmen und das Bild
+// in-place auf die Referenzlage bringen. Ergebnis und Zeiten in g_alignInfo.
+static void alignGrayscaleFb(camera_fb_t *fb, const AppConfig &cfg) {
+  const AnchorLines *ref = cfg.camera.align_ref_set ? &cfg.camera.align_ref : nullptr;
+  if (!ref || memcmp(&g_alignRef, ref, sizeof g_alignRef) != 0) {
+    g_alignLastValid = kAlignIdentity;
+    g_alignRef = ref ? *ref : AnchorLines{};
+  }
+
+  const unsigned long t0 = micros();
+  AlignResult res = estimateAlignment(fb->buf, fb->width, fb->height, ref, g_alignLastValid);
+  const unsigned long t1 = micros();
+
+  if (res.status != AlignStatus::NoReference) {
+    const size_t n = (size_t)fb->width * fb->height;
+    uint8_t *scratch = (uint8_t*)heap_caps_malloc(n, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!scratch) scratch = (uint8_t*)malloc(n);
+    if (scratch) {
+      applyAlignment(fb->buf, fb->width, fb->height, res.transform, scratch);
+      free(scratch);
+    } else {
+      LOGE("Auto align: no memory for scratch buffer\n");
+    }
+  }
+  const unsigned long t2 = micros();
+
+  if (res.status == AlignStatus::Ok) g_alignLastValid = res.transform;
+  if (res.status == AlignStatus::Fallback) LOGD("Auto align fallback: %s\n", alignFallbackText(res));
+
+  g_alignInfo.enabled = true;
+  g_alignInfo.result = res;
+  g_alignInfo.detect_ms = (t1 - t0) / 1000.0f;
+  g_alignInfo.align_ms = (t2 - t1) / 1000.0f;
+}
+
 // Gemeinsame Bildvorbereitung für alle Stellen, die ein Kamerabild nutzen
 // (Auswerte-Loop, MQTT-Bild, Test Detection, Snapshot, Preview), damit überall
-// dasselbe Bild ausgewertet bzw. angezeigt wird. Aktuell: manuelle Feinrotation.
+// dasselbe Bild ausgewertet bzw. angezeigt wird: bei aktivem Auto Align die
+// Ausrichtung auf die Referenz (Feinrotation wird dann ignoriert), sonst die
+// manuelle Feinrotation.
 // Der MJPEG-Live-Stream wird nicht vorbereitet, er wird im Browser gedreht.
 void cameraPrepareFrame(camera_fb_t *fb, const AppConfig &cfg) {
+  if (cfg.camera.auto_align && fb && fb->format == PIXFORMAT_GRAYSCALE) {
+    alignGrayscaleFb(fb, cfg);
+    return;
+  }
+  if (!cfg.camera.auto_align && g_alignInfo.enabled) {
+    g_alignInfo = kAlignInfoOff;
+    g_alignLastValid = kAlignIdentity;
+  }
   rotateGrayscaleFb(fb, cfg.camera.fine_rotation);
+}
+
+const CameraAlignInfo &cameraAlignInfo() {
+  return g_alignInfo;
 }
 
 bool cameraToJpeg(camera_fb_t *fb, int quality, uint8_t **jpg_buf, size_t *jpg_len) {
