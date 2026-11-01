@@ -42,6 +42,19 @@ static uint16_t mqttBufferSizeForConfig(const AppConfig &cfg) {
   return cfg.mqtt.image_enabled ? MQTT_BUFFER_SIZE_WITH_IMAGE : MQTT_BUFFER_SIZE_DEFAULT;
 }
 
+// Config aus dem Web-UI übernehmen, die Auto-Align-Referenz aber behalten:
+// Sie ändert sich nur über Set Reference oder Import. Ein Web-UI mit vorher
+// geladener Config würde sie sonst bei Speichern oder Test Detection mit dem
+// alten Stand überschreiben.
+static bool configFromJsonKeepAlignRef(const String &json, AppConfig &cfg) {
+  const bool refSet = cfg.camera.align_ref_set;
+  const AnchorLines ref = cfg.camera.align_ref;
+  const bool ok = configFromJson(json, cfg);
+  cfg.camera.align_ref_set = refSet;
+  cfg.camera.align_ref = ref;
+  return ok;
+}
+
 static void anchorLinesToJson(JsonObject o, const AnchorLines &l) {
   const struct { const char *name; const AnchorPoint &p; } points[] = {
     {"top_left", l.top_left},
@@ -430,7 +443,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     int oldCameraWidth = cfg.camera.width;
     int oldCameraHeight = cfg.camera.height;
 
-    if (!configFromJson(body, cfg)) {
+    if (!configFromJsonKeepAlignRef(body, cfg)) {
       LOGE("Invalid JSON in /api/config\n");
       server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid json\"}");
       return;
@@ -665,7 +678,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 
     String body = server.arg("plain");
     if (body.length() > 2) {
-      configFromJson(body, cfg);
+      configFromJsonKeepAlignRef(body, cfg);
       cameraApplySettings(cfg);
       }
 

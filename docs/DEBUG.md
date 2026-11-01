@@ -79,7 +79,7 @@ Bei Symbolen mit Auto-Threshold wird zusätzlich der gemessene `contrast` und de
 
 | Endpoint | Methode | Funktion |
 |---|---|---|
-| `/api/config` | GET / POST | Konfiguration lesen / schreiben |
+| `/api/config` | GET / POST | Konfiguration lesen / schreiben (POST lässt die Auto-Align-Referenz unverändert; sie ändert sich nur über `/api/align/reference` oder Import) |
 | `/api/config/export` | GET | Config als `HP-Remote-config.json` |
 | `/api/config/import` | POST | Config importieren (ohne `align_ref_*`-Felder wird die Auto-Align-Referenz verworfen) |
 | `/api/snapshot` | GET | Einzelbild (Graustufen-JPEG) |
