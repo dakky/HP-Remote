@@ -188,7 +188,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
         "#view{flex:1;position:relative;min-height:0;overflow:hidden}"
         "#view #stream,#lines{position:absolute;inset:0;width:100%;height:100%}"
         "#lines{pointer-events:none}"
-        "#lpath{fill:none;stroke-width:1;vector-effect:non-scaling-stroke;opacity:.6}";
+        "#lpath{fill:none;stroke-width:3;vector-effect:non-scaling-stroke;opacity:.7}";
       alignJs =
         "var AW=0,AH=0,AT=null,AL=null,AOK=false;"
         // Drei Strecken aus den Messpunkten (Pixel des Kamerabilds wie in /api/status)

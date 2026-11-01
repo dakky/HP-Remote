@@ -3198,10 +3198,10 @@ function anchorSegments(l){
   ];
 }
 
-function strokeAnchorLines(ctx, l, color, dash){
+function strokeAnchorLines(ctx, l, color, width, dash){
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = width;
   ctx.setLineDash(dash);
   anchorSegments(l).forEach(([p, q]) => {
     ctx.beginPath();
@@ -3212,19 +3212,20 @@ function strokeAnchorLines(ctx, l, color, dash){
   ctx.restore();
 }
 
-// Referenz gestrichelt, erkannte Linien (ins angezeigte, ausgerichtete Bild
-// umgerechnet) durchgezogen
+// Erkannte Linien (ins angezeigte, ausgerichtete Bild umgerechnet) breit,
+// die Referenz gestrichelt darüber, damit beide sichtbar bleiben
 function drawAnchorOverlay(ctx){
-  const ref = alignRefFromConfig(state.config?.camera);
-  if (ref) strokeAnchorLines(ctx, ref, 'rgba(255,255,255,0.55)', [6, 4]);
-
   const a = state.align;
   const f = state.alignFrame;
-  if (!a?.enabled || !a.lines || a.scale == null || !f) return;
-  const t = { dx:a.dx, dy:a.dy, angle_deg:a.angle_deg, scale:a.scale };
-  const lines = {};
-  for (const [name, p] of Object.entries(a.lines)) lines[name] = alignedPoint(p, t, f.w, f.h);
-  strokeAnchorLines(ctx, lines, a.status === 'ok' ? 'rgba(255,0,255,0.8)' : 'rgba(255,170,0,0.8)', []);
+  if (a?.enabled && a.lines && a.scale != null && f) {
+    const t = { dx:a.dx, dy:a.dy, angle_deg:a.angle_deg, scale:a.scale };
+    const lines = {};
+    for (const [name, p] of Object.entries(a.lines)) lines[name] = alignedPoint(p, t, f.w, f.h);
+    strokeAnchorLines(ctx, lines, a.status === 'ok' ? 'rgba(255,0,255,0.8)' : 'rgba(255,170,0,0.8)', 4, []);
+  }
+
+  const ref = alignRefFromConfig(state.config?.camera);
+  if (ref) strokeAnchorLines(ctx, ref, 'rgba(255,255,255,0.8)', 1.5, [6, 4]);
 }
 
 function syncHaDiscoveryFields(){
