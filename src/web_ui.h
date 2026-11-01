@@ -469,11 +469,26 @@ progress{
   gap:8px;
 }
 .alignHead label{
-  margin:0;
+  white-space:nowrap;
 }
 .helpBtn{
-  padding:2px 9px;
+  width:26px;
+  height:26px;
+  padding:0;
+  margin:0;
   border-radius:50%;
+  flex-shrink:0;
+}
+#btnAlignRef{
+  width:auto;
+  margin:6px 0 4px 0;
+}
+#btnAlignRef:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+#align_status{
+  margin:4px 0 8px 0;
 }
 .alignHelp.hidden{
   display:none;
