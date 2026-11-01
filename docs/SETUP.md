@@ -32,16 +32,18 @@ Alternativ – ohne selbst zu kompilieren – die Datei `HP-Remote-merged.bin` a
 
 ### 3. WLAN einrichten
 
-Nach dem ersten Start öffnet der ESP einen Access Point:
+Nach dem ersten Start öffnet der ESP einen offenen Access Point (ohne Passwort):
 
 ```
-SSID: HP-Remote-Setup
+SSID: HP-Remote-XXXX   (XXXX = letzte 4 Hex-Stellen der MAC-Adresse)
 IP:   192.168.4.1
 ```
 
 Mit diesem AP verbinden, im Browser `192.168.4.1` öffnen und hier **nur die WLAN-Zugangsdaten** (Netzwerk + Passwort, optional Hostname) eintragen → **Save WiFi**. Der ESP verbindet sich danach mit dem Heimnetz.
 
-> **WLAN später wechseln:** Bei einem bereits eingerichteten Gerät im Webinterface unter **Configuration → Reset WiFi (Setup AP)** klicken. Das Gerät löscht die WLAN-Zugangsdaten, startet neu und öffnet wieder den Setup-AP `HP-Remote-Setup`. Alle anderen Einstellungen (MQTT, ROIs) bleiben erhalten. Anschließend wie oben mit dem neuen Netz verbinden.
+> **Setup-AP bei eingerichtetem WLAN:** Das Gerät versucht nur beim Start etwa 15 s lang, sich mit dem gespeicherten WLAN zu verbinden. Schlägt das fehl (z. B. schwaches Signal oder Router noch nicht bereit), öffnet es den Setup-AP und bleibt dort bis zum nächsten Neustart. Die Zugangsdaten bleiben gespeichert: unter `192.168.4.1` neu starten (**Reboot Device** bzw. `POST /api/reboot`), dann verbindet es sich wieder.
+
+> **WLAN später wechseln:** Bei einem bereits eingerichteten Gerät im Webinterface unter **Configuration → Reset WiFi (Setup AP)** klicken. Das Gerät löscht die WLAN-Zugangsdaten, startet neu und öffnet wieder den Setup-AP `HP-Remote-XXXX`. Alle anderen Einstellungen (MQTT, ROIs) bleiben erhalten. Anschließend wie oben mit dem neuen Netz verbinden.
 
 ### 4. MQTT & Gerät konfigurieren
 

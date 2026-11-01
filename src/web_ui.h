@@ -1162,7 +1162,7 @@ progress{
           <div class="subtle">Restarts the ESP32 after confirmation.</div>
 
           <button id="btnWifiReset" onclick="wifiReset()" style="margin-top:12px;background:#7a3030">Reset WiFi (Setup AP)</button>
-          <div class="subtle">Clears the WiFi credentials and restarts into the <b>HP-Remote-Setup</b> access point so you can connect to a different network. All other settings (MQTT, ROIs) are kept.</div>
+          <div class="subtle">Clears the WiFi credentials and restarts into the <b>HP-Remote-XXXX</b> setup access point so you can connect to a different network. All other settings (MQTT, ROIs) are kept.</div>
         </div>
       </div>
     </div>
@@ -1541,7 +1541,7 @@ async function rebootDevice(){
 async function wifiReset(){
   const confirmed = confirm(
     'WiFi-Zugangsdaten wirklich löschen?\\n\\n' +
-    'Das Gerät startet danach im Setup-AP "HP-Remote-Setup". ' +
+    'Das Gerät startet danach im Setup-AP "HP-Remote-XXXX". ' +
     'Verbinde dich mit diesem AP und öffne 192.168.4.1, um ein neues WLAN einzurichten.\\n\\n' +
     'MQTT- und ROI-Einstellungen bleiben erhalten.'
   );
@@ -1553,7 +1553,7 @@ async function wifiReset(){
     const res = await api('/api/wifi_reset', { method:'POST' });
     document.getElementById('out').textContent =
       JSON.stringify(res, null, 2) +
-      "\\n\\nGerät startet im Setup-AP 'HP-Remote-Setup'.\\n" +
+      "\\n\\nGerät startet im Setup-AP 'HP-Remote-XXXX'.\\n" +
       "Mit diesem AP verbinden und 192.168.4.1 öffnen.";
     setButtonBusy('btnWifiReset', false);
     flashButtonState('btnWifiReset', true, '✓ AP-Modus');
