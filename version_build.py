@@ -5,7 +5,6 @@ import re
 import subprocess
 
 project_dir = env.subst("$PROJECT_DIR")
-version_file = os.path.join(project_dir, "src", "version.txt")
 
 def git_output(*args):
     try:
@@ -14,14 +13,6 @@ def git_output(*args):
         ).strip()
     except (OSError, subprocess.CalledProcessError):
         return ""
-
-
-def legacy_base_version():
-    try:
-        with open(version_file, "r") as version_handle:
-            return version_handle.read().strip()
-    except OSError:
-        return "0.0.0"
 
 
 def release_version(tag):
@@ -53,7 +44,7 @@ def build_metadata():
 
     latest_tag = git_output("describe", "--tags", "--abbrev=0", "--match", tag_pattern)
     next_version = next_patch_version(latest_tag)
-    version = f"{next_version or legacy_base_version()}-snapshot.{commit}"
+    version = f"{next_version or "0.0.0"}-snapshot.{commit}"
     if dirty:
         version += ".dirty"
     return version, commit
