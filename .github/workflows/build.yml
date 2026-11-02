@@ -56,9 +56,19 @@ jobs:
           path: .pio/build/xiao_esp32s3/artifacts/
           if-no-files-found: error
 
+  # Host-Tests (g++, ohne ESP32-Toolchain), siehe docs/DEVELOPMENT.md
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
+      - name: Run host tests
+        run: make -C tests
+
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
-    needs: build
+    needs: [build, host-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write
