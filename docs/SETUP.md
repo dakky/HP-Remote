@@ -302,6 +302,8 @@ Set Reference ist nur bei ausgeschaltetem Auto Align möglich (der Knopf ist son
 
 Die Referenz übersteht Neustarts und wandert mit **Export Configuration**/**Import Configuration** mit, damit ROIs und Referenz zusammen bleiben. Ein normales SaveConfig ändert sie nicht. Fehlen die Referenzfelder beim Import, wird die Referenz verworfen.
 
+Die Beispiel-Konfiguration [`HP-Remote-config.json`](HP-Remote-config.json) enthält eine Referenz, gedacht als Anschauung und nicht zum direkten Übernehmen. Sie passt nur zu den ROIs und zur Kameralage dieses Beispiels, deshalb ist Auto Align dort aus. Nach dem Einrichten der eigenen ROIs die Referenz per Set Reference selbst setzen.
+
 ### Was dann passiert
 
 - Bei aktivem Auto Align wird **jedes** ausgewertete Bild ausgerichtet: Auswerte-Loop, MQTT-Bild, Test Detection sowie Capture/Preview im ROI-Editor. Alle sehen dasselbe Bild.
