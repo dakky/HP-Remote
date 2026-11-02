@@ -42,6 +42,33 @@ static uint16_t mqttBufferSizeForConfig(const AppConfig &cfg) {
   return cfg.mqtt.image_enabled ? MQTT_BUFFER_SIZE_WITH_IMAGE : MQTT_BUFFER_SIZE_DEFAULT;
 }
 
+// Config aus dem Web-UI übernehmen, die Auto-Align-Referenz aber behalten:
+// Sie ändert sich nur über Set Reference oder Import. Ein Web-UI mit vorher
+// geladener Config würde sie sonst bei Speichern oder Test Detection mit dem
+// alten Stand überschreiben.
+static bool configFromJsonKeepAlignRef(const String &json, AppConfig &cfg) {
+  const bool refSet = cfg.camera.align_ref_set;
+  const AnchorLines ref = cfg.camera.align_ref;
+  const bool ok = configFromJson(json, cfg);
+  cfg.camera.align_ref_set = refSet;
+  cfg.camera.align_ref = ref;
+  return ok;
+}
+
+static void anchorLinesToJson(JsonObject o, const AnchorLines &l) {
+  const struct { const char *name; const AnchorPoint &p; } points[] = {
+    {"top_left", l.top_left},
+    {"top_right", l.top_right},
+    {"bottom_left", l.bottom_left},
+    {"bottom_right", l.bottom_right},
+    {"vertical", l.vertical},
+  };
+  for (const auto &pt : points) {
+    o[pt.name]["x"] = pt.p.x;
+    o[pt.name]["y"] = pt.p.y;
+  }
+}
+
 
 // ── MJPEG Stream Server (Port 81) ────────────────────────────────────────────
 static WiFiServer mjpegServer(81);
@@ -147,6 +174,63 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       return;
     }
 
+    // Bei Auto Align richtet der Browser den Stream mit der zuletzt erkannten
+    // Transformation aus (CSS-Matrix, keine Last auf dem Gerät) und blendet die
+    // erkannten Ankerlinien ein. Sonst wie bisher die Feinrotation.
+    String streamHtml;
+    String alignCss;
+    String alignJs;
+    if (cfg.camera.auto_align) {
+      streamHtml =
+        "<div id='view'><img id='stream' alt='MJPEG Stream'>"
+        "<svg id='lines'><path id='lpath'/></svg></div>";
+      alignCss =
+        "#view{flex:1;position:relative;min-height:0;overflow:hidden}"
+        "#view #stream,#lines{position:absolute;inset:0;width:100%;height:100%}"
+        "#lines{pointer-events:none}"
+        "#lpath{fill:none;stroke-width:3;vector-effect:non-scaling-stroke;opacity:.7}";
+      alignJs =
+        "var AW=0,AH=0,AT=null,AL=null,AOK=false;"
+        // Drei Strecken aus den Messpunkten (Pixel des Kamerabilds wie in /api/status)
+        "function aseg(l){"
+          "var ux=l.top_right.x-l.top_left.x+l.bottom_right.x-l.bottom_left.x,"
+              "uy=l.top_right.y-l.top_left.y+l.bottom_right.y-l.bottom_left.y,"
+              "n=Math.hypot(ux,uy)||1,nx=-uy/n,ny=ux/n,"
+              "h=(l.bottom_left.y+l.bottom_right.y-l.top_left.y-l.top_right.y)/4,v=l.vertical;"
+          "function p(a){return a.x.toFixed(1)+' '+a.y.toFixed(1);}"
+          "return 'M'+p(l.top_left)+'L'+p(l.top_right)+'M'+p(l.bottom_left)+'L'+p(l.bottom_right)"
+            "+'M'+p({x:v.x-nx*h,y:v.y-ny*h})+'L'+p({x:v.x+nx*h,y:v.y+ny*h});"
+        "}"
+        // Rohbild → Referenzlage: rotate(-a) scale(1/s) translate(-d) um die
+        // Bildmitte; d in Bildschirm-Pixeln (k = Darstellungsmaßstab)
+        "function aview(){"
+          "if(!AW)return;"
+          "var img=document.getElementById('stream'),sv=document.getElementById('lines'),"
+              "lp=document.getElementById('lpath');"
+          "var k=Math.min(img.clientWidth/AW,img.clientHeight/AH),m='';"
+          "if(AT)m='rotate('+(-AT.angle_deg)+'deg) scale('+(1/AT.scale)+') translate('"
+            "+(-AT.dx*k)+'px,'+(-AT.dy*k)+'px)';"
+          "img.style.transform=m;sv.style.transform=m;"
+          "sv.setAttribute('viewBox','0 0 '+AW+' '+AH);"
+          "lp.setAttribute('d',AL?aseg(AL):'');"
+          "lp.setAttribute('stroke',AOK?'#f0f':'#fa0');"
+        "}"
+        "function aload(){"
+          "fetch('/api/status').then(function(r){return r.json();})"
+          ".then(function(s){"
+            "var a=s.align||{};"
+            "AW=s.camera.width;AH=s.camera.height;"
+            "AT=a.scale!=null?a:null;AL=a.lines||null;AOK=a.status=='ok';"
+            "aview();"
+          "}).catch(function(){});"
+        "}"
+        "aload();setInterval(aload,10000);"
+        "window.addEventListener('resize',aview);";
+    } else {
+      streamHtml = "<img id='stream' alt='MJPEG Stream' style='transform:rotate(" +
+                   String(cfg.camera.fine_rotation, 1) + "deg)'>";
+    }
+
     String html =
       "<!doctype html><html><head><meta charset='utf-8'>"
       "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -190,8 +274,9 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       "#status.busy{font-size:17px;color:#fd6;"
                   "animation:pulse 1s ease-in-out infinite}"
       "@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}"
+      + alignCss +
       "</style></head><body>"
-      "<img id='stream' alt='MJPEG Stream' style='transform:rotate(" + String(cfg.camera.fine_rotation, 1) + "deg)'>"
+      + streamHtml +
       "<div class='bar'>"
         "<div class='btns'>"
           "<div class='row row1'>"
@@ -233,6 +318,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       "</div>"
       "<script>"
       "document.getElementById('stream').src='http://'+location.hostname+':81';"
+      + alignJs +
       "function press(btn){"
         "var st=document.getElementById('status');"
         "st.textContent='...';"
@@ -341,6 +427,37 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 
     doc["stream"]["enabled"] = cfg.stream.enabled;
 
+    doc["align"]["enabled"] = cfg.camera.auto_align;
+    doc["align"]["reference_set"] = cfg.camera.align_ref_set;
+    if (cfg.camera.align_ref_set) {
+      anchorLinesToJson(doc["align"]["reference"].to<JsonObject>(), cfg.camera.align_ref);
+    }
+    {
+      // Ergebnis im zuletzt vorbereiteten Bild. Direkt nach dem Einschalten,
+      // vor dem ersten Bild, gilt noch die Identität.
+      const CameraAlignInfo &ai = cameraAlignInfo();
+      const char *status = "disabled";
+      if (cfg.camera.auto_align) {
+        if (ai.enabled) status = alignStatusText(ai.result.status);
+        else status = alignStatusText(cfg.camera.align_ref_set ? AlignStatus::Fallback : AlignStatus::NoReference);
+      }
+      doc["align"]["status"] = status;
+      if (cfg.camera.auto_align && ai.enabled) {
+        const AlignTransform &t = ai.result.transform;
+        doc["align"]["dx"] = t.dx;
+        doc["align"]["dy"] = t.dy;
+        doc["align"]["angle_deg"] = t.angle_deg;
+        doc["align"]["scale"] = t.scale;
+        doc["align"]["lines_found"] = ai.result.lines_found;
+        if (ai.result.lines_found) {
+          anchorLinesToJson(doc["align"]["lines"].to<JsonObject>(), ai.result.lines);
+        }
+        if (const char *reason = alignFallbackText(ai.result)) doc["align"]["error"] = reason;
+        doc["align"]["detect_ms"] = ai.detect_ms;
+        doc["align"]["align_ms"] = ai.align_ms;
+      }
+    }
+
     doc["room"]["enabled"] = cfg.room_sensor.enabled;
     doc["room"]["available"] = RoomSensorSht31.isAvailable();
     doc["room"]["temp_c"] = RoomSensorSht31.lastTempC();
@@ -385,7 +502,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     int oldCameraWidth = cfg.camera.width;
     int oldCameraHeight = cfg.camera.height;
 
-    if (!configFromJson(body, cfg)) {
+    if (!configFromJsonKeepAlignRef(body, cfg)) {
       LOGE("Invalid JSON in /api/config\n");
       server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid json\"}");
       return;
@@ -620,7 +737,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 
     String body = server.arg("plain");
     if (body.length() > 2) {
-      configFromJson(body, cfg);
+      configFromJsonKeepAlignRef(body, cfg);
       cameraApplySettings(cfg);
       }
 
@@ -636,6 +753,65 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     cameraRelease(fb);
 
     lastPayload = out;
+    server.send(200, "application/json", out);
+  });
+
+
+  // POST /api/align/reference – "Set Reference": misst die Ankerlinien im
+  // aktuellen Bild und speichert ihre Lage als Referenz für Auto Align.
+  // Nur bei ausgeschaltetem Auto Align: Gemessen wird dasselbe vorbereitete
+  // Bild (ggf. mit Feinrotation), auf dem die ROIs eingerichtet wurden.
+  // Bei Fehler bleibt die bisherige Referenz erhalten.
+  server.on("/api/align/reference", HTTP_POST, [&]() {
+    LOGI("HTTP POST /api/align/reference\n");
+
+    if (cfg.camera.auto_align) {
+      server.send(409, "application/json",
+                  "{\"ok\":false,\"error\":\"disable auto align before setting the reference\"}");
+      return;
+    }
+
+    camera_fb_t *fb = cameraCapture();
+    if (!fb) {
+      LOGE("capture failed in /api/align/reference\n");
+      server.send(500, "application/json", "{\"ok\":false,\"error\":\"capture failed\"}");
+      return;
+    }
+    cameraPrepareFrame(fb, cfg);
+
+    AnchorLines lines;
+    AnchorError err = measureAnchorLines(fb->buf, fb->width, fb->height, lines);
+    cameraRelease(fb);
+
+    if (err != AnchorError::None) {
+      LOGE("Set reference failed: %s\n", anchorErrorText(err));
+      JsonDocument doc;
+      doc["ok"] = false;
+      doc["error"] = anchorErrorText(err);
+      String out;
+      serializeJson(doc, out);
+      server.send(422, "application/json", out);
+      return;
+    }
+
+    AppConfig next = cfg;
+    next.camera.align_ref_set = true;
+    next.camera.align_ref = lines;
+    if (!saveConfigToFile(next)) {
+      LOGE("Set reference: failed to save config\n");
+      server.send(500, "application/json", "{\"ok\":false,\"error\":\"save failed\"}");
+      return;
+    }
+    cfg = next;
+
+    LOGI("Align reference set: top %.1f/%.1f bottom %.1f/%.1f vertical x=%.1f\n",
+         lines.top_left.y, lines.top_right.y, lines.bottom_left.y, lines.bottom_right.y, lines.vertical.x);
+
+    JsonDocument doc;
+    doc["ok"] = true;
+    anchorLinesToJson(doc["reference"].to<JsonObject>(), lines);
+    String out;
+    serializeJson(doc, out);
     server.send(200, "application/json", out);
   });
 
@@ -914,6 +1090,11 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     }
     
     AppConfig newCfg = cfg;
+    // ROIs und Auto-Align-Referenz gehören zusammen: Enthält die importierte
+    // Config keine Referenz (ältere Export-Datei), wird die bisherige verworfen,
+    // statt sie neben fremden ROIs stehen zu lassen.
+    newCfg.camera.align_ref_set = false;
+    newCfg.camera.align_ref = AnchorLines{};
     if (!configFromJson(body, newCfg)) {
       LOGE("Import: invalid JSON or parse error\n");
       server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid json\"}");
