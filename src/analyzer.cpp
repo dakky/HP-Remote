@@ -3,6 +3,7 @@
 #include <math.h>
 #include <vector>
 #include "debug_log.h"
+#include "string_convert.h"
 
 // Hardcoded fallback segment layout (standard profile values).
 // Used when a named profile cannot be found in cfg.seg_profiles.
@@ -16,7 +17,7 @@ static const SegSample kFallbackSegs[7] = {
   {0.25f, 0.46f, 0.50f, 0.08f}, // g middle
 };
 
-static const SegSample* findProfile(const std::vector<SevenSegProfile> &profiles, const String &name) {
+static const SegSample* findProfile(const std::vector<SevenSegProfile> &profiles, const std::string &name) {
   for (const auto &p : profiles) {
     if (p.name == name) return p.segs;
   }
@@ -388,7 +389,7 @@ static char bitsToSevenSegChar(uint8_t bits) {
 
 static Roi* findRoiById(AppConfig &cfg, const String &roiId) {
   for (auto &roi : cfg.rois) {
-    if (roi.id == roiId) return &roi;
+    if (roiId == roi.id.c_str()) return &roi;
   }
   return nullptr;
 }
@@ -736,7 +737,7 @@ String evaluateCurrent(camera_fb_t *fb, AppConfig &cfg) {
 
       roi.last_state = state;
       {
-        String key = roi.label.length() ? roi.label : roi.id;
+        String key = toArduino(roi.label.length() ? roi.label : roi.id);
         result[key] = state;
       }
 
@@ -773,7 +774,7 @@ String evaluateCurrent(camera_fb_t *fb, AppConfig &cfg) {
       double value = -1.0;
       bool ok = evaluateSevenSegDebug(fb, roi, segs, o, value);
 
-      String key = roi.label.length() ? roi.label : roi.id;
+      String key = toArduino(roi.label.length() ? roi.label : roi.id);
       if (!ok) {
         result["valid"] = false;
         result[key] = -1;

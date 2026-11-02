@@ -20,6 +20,7 @@
 #include "touch_config.h"
 #include "room_sensor.h"
 #include "build_info.h"   // generiert von version_build.py (FW_VERSION, FW_BUILD)
+#include "string_convert.h"
 
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -106,10 +107,10 @@ static bool acquireStateFrame(JsonDocument &doc) {
 // Leerer Rückgabestring = nicht gefunden.
 static String findRoiIdByLabel(const char* const* needles, int n) {
   for (auto &roi : cfg.rois) {
-    String lbl = roi.label;
+    String lbl = toArduino(roi.label);
     lbl.toLowerCase();
     for (int i = 0; i < n; i++) {
-      if (lbl.indexOf(needles[i]) >= 0) return roi.id;
+      if (lbl.indexOf(needles[i]) >= 0) return toArduino(roi.id);
     }
   }
   return "";
@@ -866,17 +867,17 @@ void setup() {
   loadConfigFromFile(cfg);
 
   // Migration: alte Geräte-IDs (wp_remote / 000000) auf neue Defaults zurücksetzen
-  if (cfg.device.id.indexOf("wp_remote") >= 0 ||
-      cfg.device.id.indexOf("000000")    >= 0 ||
+  if (cfg.device.id.find("wp_remote") != std::string::npos ||
+      cfg.device.id.find("000000")    != std::string::npos ||
       cfg.device.id.length() == 0) {
     LOGI("Migrating legacy device id '%s' -> defaults\n", cfg.device.id.c_str());
-    cfg.device.id   = defaultDeviceId();
-    cfg.device.name = defaultDeviceName();
-    cfg.wifi.hostname = defaultHostname();
+    cfg.device.id   = toStd(defaultDeviceId());
+    cfg.device.name = toStd(defaultDeviceName());
+    cfg.wifi.hostname = toStd(defaultHostname());
     // MQTT-Topic nur migrieren wenn es noch das alte Format hat
-    if (cfg.mqtt.topic.indexOf("wp_remote") >= 0 ||
-        cfg.mqtt.topic.indexOf("000000")    >= 0) {
-      cfg.mqtt.topic = defaultMqttTopicBase();
+    if (cfg.mqtt.topic.find("wp_remote") != std::string::npos ||
+        cfg.mqtt.topic.find("000000")    != std::string::npos) {
+      cfg.mqtt.topic = toStd(defaultMqttTopicBase());
     }
     saveConfigToFile(cfg);
   }

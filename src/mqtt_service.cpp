@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include "debug_log.h"
+#include "string_convert.h"
 #include "mqtt_ha_discovery.h"
 #include "device_identity.h"
 #include "touch_controller.h"
@@ -36,7 +37,7 @@ static void publishTouchState(const String &payload) {
         LOGE("touch-state publish skipped: no MQTT connection\n");
         return;
     }
-    String st = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_STATE_SUFFIX;
+    String st = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_STATE_SUFFIX;
     g_mqttClient->publish(st.c_str(), payload.c_str(), false);
 }
 
@@ -116,7 +117,7 @@ void mqttTouchCallback(const char* topic, byte* payload, unsigned int len) {
         }
 
         if (g_cfgRef && g_mqttClient && g_mqttClient->connected()) {
-            String st = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_STATE_SUFFIX;
+            String st = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_STATE_SUFFIX;
             String pl = String("{\"last\":\"shortcut:") + label + "\",\"ok\":" +
                         (r ? "true" : "false") + "}";
             g_mqttClient->publish(st.c_str(), pl.c_str(), false);
@@ -135,7 +136,7 @@ void mqttTouchCallback(const char* topic, byte* payload, unsigned int len) {
         unsigned long dur = doc["duration"] | 500UL;   // Default 500ms
         ok = WpTouch.combo(btns, n, dur);
         if (g_cfgRef && g_mqttClient && g_mqttClient->connected()) {
-            String st = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_STATE_SUFFIX;
+            String st = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_STATE_SUFFIX;
             String pl = String("{\"last\":\"combo\",\"ok\":") + (ok ? "true" : "false") + "}";
             g_mqttClient->publish(st.c_str(), pl.c_str(), false);
         }
@@ -152,7 +153,7 @@ void mqttTouchCallback(const char* topic, byte* payload, unsigned int len) {
             seq[i] = arr[i].as<String>();
         ok = WpTouch.pressSequence(seq, n);
         if (g_cfgRef && g_mqttClient && g_mqttClient->connected()) {
-            String st = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_STATE_SUFFIX;
+            String st = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_STATE_SUFFIX;
             String pl = ok ? "{\"last\":\"sequence\",\"ok\":true}"
                            : "{\"last\":\"sequence\",\"ok\":false}";
             g_mqttClient->publish(st.c_str(), pl.c_str(), false);
@@ -201,7 +202,7 @@ void mqttTouchCallback(const char* topic, byte* payload, unsigned int len) {
     }
 
     if (g_cfgRef && g_mqttClient && g_mqttClient->connected()) {
-        String st = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_STATE_SUFFIX;
+        String st = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_STATE_SUFFIX;
         String pl = "{\"last\":\"" + btnName + "\",\"ok\":" + (r ? "true" : "false") + "}";
         g_mqttClient->publish(st.c_str(), pl.c_str(), false);
     }
@@ -217,11 +218,11 @@ void mqttSetGlobalClient(PubSubClient *mqtt) {
 
 // ─── MQTT Helpers ─────────────────────────────────────────────────────────────
 static String mqttAvailabilityTopic(const AppConfig &cfg) {
-    return cfg.mqtt.topic + "/availability";
+    return toArduino(cfg.mqtt.topic) + "/availability";
 }
 
 static String mqttImageTopic(const AppConfig &cfg) {
-    return cfg.mqtt.topic + "/snapshot";
+    return toArduino(cfg.mqtt.topic) + "/snapshot";
 }
 
 // ─── Connect / Reconnect ─────────────────────────────────────────────────────
@@ -259,7 +260,7 @@ bool mqttEnsureConnected(PubSubClient &mqtt, const AppConfig &cfg) {
 
     // Touch-Command Topic abonnieren
     if (g_cfgRef) {
-        String cmdTopic = g_cfgRef->mqtt.topic + WP_MQTT_TOPIC_CMD_SUFFIX;
+        String cmdTopic = toArduino(g_cfgRef->mqtt.topic) + WP_MQTT_TOPIC_CMD_SUFFIX;
         mqtt.subscribe(cmdTopic.c_str());
         LOGI("MQTT subscribed: %s\n", cmdTopic.c_str());
     }
@@ -289,7 +290,7 @@ void mqttPublishState(PubSubClient &mqtt, const AppConfig &cfg, const String &pa
 
 void mqttPublishHealth(PubSubClient &mqtt, const AppConfig &cfg, const String &payload) {
     if (!mqttEnsureConnected(mqtt, cfg)) return;
-    String topic = cfg.mqtt.topic + "/health";
+    String topic = toArduino(cfg.mqtt.topic) + "/health";
     bool ok = mqtt.publish(topic.c_str(), payload.c_str(), true);
     if (!ok) LOGE("MQTT health publish failed\n");
 }
@@ -306,11 +307,11 @@ void mqttPublishImage(PubSubClient &mqtt, const AppConfig &cfg,
 
 // ─── Heizraum-Sensor (SHT31, optional) ───────────────────────────────────────
 static String mqttRoomStateTopic(const AppConfig &cfg) {
-    return cfg.mqtt.topic + "/room/state";
+    return toArduino(cfg.mqtt.topic) + "/room/state";
 }
 
 static String mqttRoomAvailabilityTopic(const AppConfig &cfg) {
-    return cfg.mqtt.topic + "/room/availability";
+    return toArduino(cfg.mqtt.topic) + "/room/availability";
 }
 
 void mqttPublishRoomSensorState(PubSubClient &mqtt, const AppConfig &cfg, const String &payload) {

@@ -1,5 +1,8 @@
 #include "app_config.h"
 #include "device_identity.h"
+#include "string_convert.h"
+
+#include <cstring>
 
 struct CameraFrameOption {
   int w;
@@ -55,14 +58,14 @@ void loadDefaultConfig(AppConfig &cfg) {
 
   /* Device */
 
-  cfg.device.id = defaultDeviceId();
-  cfg.device.name = defaultDeviceName();
+  cfg.device.id = toStd(defaultDeviceId());
+  cfg.device.name = toStd(defaultDeviceName());
 
   /* WiFi */
 
   cfg.wifi.ssid = "";
   cfg.wifi.password = "";
-  cfg.wifi.hostname = defaultHostname();
+  cfg.wifi.hostname = toStd(defaultHostname());
 
   /* Camera */
 
@@ -104,7 +107,7 @@ void loadDefaultConfig(AppConfig &cfg) {
   cfg.mqtt.image_enabled = false;
   cfg.mqtt.host = "192.168.1.10";
   cfg.mqtt.port = 1883;
-  cfg.mqtt.topic = defaultMqttTopicBase() + "/state";
+  cfg.mqtt.topic = toStd(defaultMqttTopicBase()) + "/state";
   cfg.mqtt.username = "";
   cfg.mqtt.password = "";
 
@@ -181,12 +184,12 @@ void loadDefaultConfig(AppConfig &cfg) {
   });
 }
 
-String jsonStringOrDefault(JsonVariantConst v, const char *def) {
+std::string jsonStringOrDefault(JsonVariantConst v, const char *def) {
   if (v.is<const char*>()) {
     const char *p = v.as<const char*>();
-    if (p) return String(p);
+    if (p) return std::string(p);
   }
-  return String(def);
+  return std::string(def);
 }
 
 static void roiToJson(JsonObject o, const Roi &r) {
@@ -221,7 +224,7 @@ static void roiToJson(JsonObject o, const Roi &r) {
   o["locked"] = r.locked;
 }
 
-String configToJson(const AppConfig &cfg) {
+std::string configToJson(const AppConfig &cfg) {
 
   JsonDocument doc;
 
@@ -329,12 +332,12 @@ String configToJson(const AppConfig &cfg) {
     roiToJson(o, r);
   }
 
-  String out;
+  std::string out;
   serializeJson(doc, out);
   return out;
 }
 
-bool configFromJson(const String &json, AppConfig &cfg) {
+bool configFromJson(const std::string &json, AppConfig &cfg) {
 
   JsonDocument doc;
 
@@ -439,7 +442,7 @@ bool configFromJson(const String &json, AppConfig &cfg) {
     for (JsonObject po : doc["seg_profiles"].as<JsonArray>()) {
       SevenSegProfile p;
       p.name = jsonStringOrDefault(po["name"], "");
-      if (p.name.isEmpty()) continue;
+      if (p.name.empty()) continue;
 
       // "standard" is always read-only – skip overwriting it from JSON,
       // the hardcoded defaults from loadDefaultConfig are kept.
@@ -556,9 +559,9 @@ bool configFromJson(const String &json, AppConfig &cfg) {
   // Sie basieren auf der persistent UID des konkreten Geräts, damit beim
   // Kopieren einer Config zwischen zwei Geräten keine MQTT-Topic-Kollision
   // und keine HA-Discovery-Kollision entsteht.
-  next.device.id   = defaultDeviceId();
-  next.wifi.hostname = defaultHostname();
-  next.mqtt.topic  = defaultMqttTopicBase() + "/state";
+  next.device.id   = toStd(defaultDeviceId());
+  next.wifi.hostname = toStd(defaultHostname());
+  next.mqtt.topic  = toStd(defaultMqttTopicBase()) + "/state";
 
   cfg = next;
   return true;

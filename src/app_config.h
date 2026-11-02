@@ -1,20 +1,21 @@
 #pragma once
 
-#include <Arduino.h>
 #include <ArduinoJson.h>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/frame_align.h"
 
 struct WifiConfig {
-  String ssid;
-  String password;
-  String hostname;
+  std::string ssid;
+  std::string password;
+  std::string hostname;
 };
 
 struct DeviceConfig {
-  String id;
-  String name;
+  std::string id;
+  std::string name;
 };
 
 struct CameraConfig {
@@ -45,16 +46,16 @@ struct CameraConfig {
 struct MqttConfig {
   bool enabled;
   bool image_enabled;
-  String host;
+  std::string host;
   uint16_t port;
-  String topic;
-  String username;
-  String password;
+  std::string topic;
+  std::string username;
+  std::string password;
 };
 
 struct HomeAssistantConfig {
-  bool   enabled;
-  String discovery_prefix;
+  bool enabled;
+  std::string discovery_prefix;
 };
 
 struct StreamConfig {
@@ -76,14 +77,14 @@ struct SegSample {
 };
 
 struct SevenSegProfile {
-  String name;
+  std::string name;
   SegSample segs[7]; // order: a, b, c, d, e, f, g
 };
 
 struct Roi {
-  String id;
-  String label;
-  String type;
+  std::string id;
+  std::string label;
+  std::string type;
 
   int x;
   int y;
@@ -106,13 +107,13 @@ struct Roi {
   int confidence_margin;
 
   bool ha_enabled;
-  String ha_name;
-  String ha_unit;
-  String ha_icon;
-  String ha_device_class;
-  String ha_state_class;
+  std::string ha_name;
+  std::string ha_unit;
+  std::string ha_icon;
+  std::string ha_device_class;
+  std::string ha_state_class;
 
-  String seg_profile; // references SevenSegProfile.name; default "standard"
+  std::string seg_profile; // references SevenSegProfile.name; default "standard"
   bool locked;        // true = ROI vor Änderungen im Editor geschützt
 };
 
@@ -133,6 +134,6 @@ struct AppConfig {
 };
 
 void loadDefaultConfig(AppConfig &cfg);
-String jsonStringOrDefault(JsonVariantConst v, const char *def);
-String configToJson(const AppConfig &cfg);
-bool configFromJson(const String &json, AppConfig &cfg);
+std::string jsonStringOrDefault(JsonVariantConst v, const char *def);
+std::string configToJson(const AppConfig &cfg);
+bool configFromJson(const std::string &json, AppConfig &cfg);
