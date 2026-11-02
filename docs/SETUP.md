@@ -296,18 +296,18 @@ Die Bedienelemente liegen in der **Camera**-Sektion unter der Fine Rotation; das
 1. **Auto Align ausschalten** (Checkbox „Auto Align" leer).
 2. Kamera, Fine Rotation und ROIs wie oben beschrieben einrichten, bis **Test Detection** korrekte Werte liefert.
 3. **Set Reference** klicken. Die Firmware nimmt ein Bild auf, misst die drei Ankerlinien und speichert ihre Lage als Referenz in der Konfiguration. Alle drei Linien müssen dabei gut sichtbar sein. Findet die Messung nicht alle drei, erscheint die Fehlermeldung unter dem Knopf und die bisherige Referenz bleibt erhalten.
-4. **Auto Align einschalten.** Der Schalter wird sofort gespeichert.
+4. **Auto Align einschalten.** Der Schalter wird sofort gespeichert, zusammen mit allen anderen noch ungespeicherten Änderungen im Formular.
 
 Set Reference ist nur bei ausgeschaltetem Auto Align möglich (der Knopf ist sonst ausgegraut). So kann die Referenz nicht versehentlich aus einem schon ausgerichteten Bild gesetzt werden. Die Referenz wird aus dem Bild **mit** Fine Rotation gemessen, also genau dem Bild, auf dem die ROIs eingezeichnet wurden.
 
-Die Referenz übersteht Neustarts und wandert mit **Export/Import** der Konfiguration mit, damit ROIs und Referenz zusammen bleiben. Ein normales SaveConfig ändert sie nicht. Fehlen die Referenzfelder beim Import, wird die Referenz verworfen.
+Die Referenz übersteht Neustarts und wandert mit **Export Configuration**/**Import Configuration** mit, damit ROIs und Referenz zusammen bleiben. Ein normales SaveConfig ändert sie nicht. Fehlen die Referenzfelder beim Import, wird die Referenz verworfen.
 
 ### Was dann passiert
 
 - Bei aktivem Auto Align wird **jedes** ausgewertete Bild ausgerichtet: Auswerte-Loop, MQTT-Bild, Test Detection sowie Capture/Preview im ROI-Editor. Alle sehen dasselbe Bild.
 - Die **Fine Rotation** wird ignoriert und ihr Regler ausgegraut. Die Drehung gleicht Auto Align selbst aus.
-- Der **Live-Stream** wird nicht auf dem Gerät ausgerichtet (das würde ihn bremsen). Der Browser verschiebt und dreht ihn stattdessen mit der zuletzt erkannten Ausrichtung.
-- Im ROI-Editor werden die erkannten Ankerlinien eingeblendet (magenta bei `ok`, orange bei `fallback`), die Referenzlage weiß gestrichelt darüber. Liegen beide aufeinander, passt die Ausrichtung. Auf der Live-Seite erscheinen nur die erkannten Linien, aktualisiert alle 10 s.
+- Der **Live-Stream** wird nicht auf dem Gerät ausgerichtet (das würde ihn bremsen). Der Browser verschiebt, dreht und skaliert ihn stattdessen mit der zuletzt erkannten Ausrichtung. Nach dem Ein- oder Ausschalten von Auto Align die Live-Seite neu laden.
+- Im ROI-Editor werden die erkannten Ankerlinien eingeblendet (magenta bei `ok`, orange bei `fallback`), die Referenzlage weiß gestrichelt darüber. Ein- und ausblenden lässt sich das über die Checkbox **Anchor Lines** über dem Bild; bei ausgeschaltetem Auto Align erscheint nur die Referenz. Liegen beide aufeinander, passt die Ausrichtung. Auf der Live-Seite erscheinen nur die erkannten Linien, aktualisiert alle 10 s.
 
 ### Status
 
@@ -318,17 +318,17 @@ Die Statuszeile unter dem Set-Reference-Knopf zeigt den Zustand der letzten Ausr
 | `Auto Align: off` | Auto Align ist ausgeschaltet. |
 | `Auto Align: no reference` | Auto Align ist an, aber es ist keine Referenz gesetzt. Das Bild bleibt unverändert. |
 | `Auto Align: ok` (grün) | Ankerlinien erkannt, Bild ausgerichtet. Dahinter stehen Verschiebung (px), Drehung (°) und Maßstab gegenüber der Referenz. |
-| `Auto Align: fallback` (orange) | In diesem Bild wurden die Linien nicht gefunden oder die Abweichung ist unplausibel groß. Es gilt die zuletzt gültige Ausrichtung weiter (nach einem Neustart: keine Korrektur). Der Grund steht in Klammern. |
+| `Auto Align: fallback` (orange) | In diesem Bild wurden die Linien nicht gefunden oder die Abweichung ist unplausibel groß. Es gilt die zuletzt gültige Ausrichtung weiter; gab es noch keine (nach Neustart, Einschalten oder neuer Referenz), bleibt das Bild unkorrigiert. Der Grund steht in Klammern. Ein `fallback` ohne Werte und Grund direkt nach dem Start oder Einschalten heißt nur, dass noch kein Bild ausgewertet wurde. |
 
-Die Statuszeile wird erst nach einer Auswertung aktuell (Capture, Test Detection oder der nächste Loop-Durchlauf). Dieselben Werte samt Erkennungs- und Ausrichtungszeit liefert `/api/status` im Abschnitt `align`, siehe [Test & Debugging](DEBUG.md).
+Die Statuszeile wird erst nach einer Auswertung aktuell (Capture, Test Detection oder der nächste Loop-Durchlauf). Dieselben Werte samt Erkennungs- und Ausrichtungszeit liefert `/api/status` im Abschnitt `align`, siehe [REST-API Übersicht](DEBUG.md#rest-api-übersicht).
 
 ### Grenzen
 
 - Ausgeglichen werden Verschiebung bis etwa **±40 px** (bei 640 px Bildbreite, bei anderen Auflösungen entsprechend umgerechnet), Drehung bis **±5°** und Maßstab **0,9–1,1** (Abstand der Kamera ±10 %). Größere Abweichungen gelten als Fehlerkennung (Status `fallback`). Dann die Kamera grob zurückjustieren oder Referenz und ROIs neu einrichten.
 - Keine Perspektivkorrektur: Wird die Kamera gekippt, sodass das Display trapezförmig erscheint, hilft Auto Align nicht.
-- Die Ankerlinien müssen sichtbar sein. Spiegelungen oder Abdeckungen über einer Linie führen zu `fallback`; ein einzelnes gestörtes Bild verdirbt die Ausrichtung aber nicht.
+- Die Ankerlinien müssen sichtbar sein. Spiegelungen oder Abdeckungen über einer Linie führen zu `fallback`. Ein gestörtes Bild wird verworfen, wenn Linien fehlen oder unplausibel liegen. Es gibt aber keine Glättung über mehrere Bilder: Eine Fehlerkennung innerhalb der Grenzen wird als `ok` übernommen. Das Overlay im ROI-Editor zeigt, ob die richtigen Linien gefunden wurden.
 - Die Referenz gilt für die eingestellte Auflösung und Spiegelung. Nach einer Änderung von `width`/`height` oder `vflip`/`hflip` müssen ROIs und Referenz ohnehin neu eingerichtet werden.
-- Funktioniert nur mit Displays, die diese drei Ankerlinien haben (WPT-Display der Bosch/Buderus-WP).
+- Funktioniert nur mit Displays, die diese drei Ankerlinien haben (Display der Bosch Compress 5000 DW bzw. Buderus WPT, siehe [unterstützte Geräte](README.md)).
 
 ---
 
