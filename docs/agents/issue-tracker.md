@@ -36,7 +36,8 @@ Das Projekt wird eigenständig entwickelt; Agents schreiben nie in
 - Keine KI-Attribution in Issue-, PR- oder Commit-Texten.
 - Vor einem Testplan (z. B. Gerätetest) die Ergebnisse in den Kommentaren
   der geschlossenen Sub-Issues desselben Epics lesen. Der Plan enthält nur,
-  was dort noch nicht getestet ist, und verweist für den Rest auf das Sub-Issue.
+  was dort noch nicht getestet ist, und verweist für den Rest auf die jeweiligen
+  Sub-Issues.
 
 ## When a skill says "publish to the issue tracker"
 

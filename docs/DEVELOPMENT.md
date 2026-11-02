@@ -56,6 +56,10 @@ FAIL distort_dreht_im_Uhrzeigersinn_um_die_Bildmitte
 Der Rückgabewert ist dann ≠ 0 (`make` meldet `Error 1`), sodass sich der
 Befehl auch in Skripten oder einem Git-Hook verwenden lässt.
 
+Die CI (`.github/workflows/build.yml`) führt die Host-Tests bei jedem Push
+im Build-Job vor der Firmware aus; schlagen sie fehl, wird weder Firmware
+gebaut noch eine Release angelegt.
+
 ### Weitere Befehle
 
 | Befehl                         | Wirkung                                                   |

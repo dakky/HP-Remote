@@ -38,6 +38,10 @@ jobs:
             exit 1
           }
           git tag "v$VERSION"
+      # Host-Tests (g++, ohne ESP32-Toolchain) auf demselben Commit wie die
+      # Firmware; schlagen sie fehl, entsteht keine Release. Siehe docs/DEVELOPMENT.md
+      - name: Run host tests
+        run: make -C tests
       - name: Build PlatformIO container
         run: docker build --tag hp-remote-builder --file Containerfile .
       - name: Build firmware
@@ -56,19 +60,9 @@ jobs:
           path: .pio/build/xiao_esp32s3/artifacts/
           if-no-files-found: error
 
-  # Host-Tests (g++, ohne ESP32-Toolchain), siehe docs/DEVELOPMENT.md
-  host-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
-      - name: Run host tests
-        run: make -C tests
-
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
-    needs: [build, host-tests]
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
