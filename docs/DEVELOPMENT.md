@@ -22,8 +22,9 @@ Die Artefakte liegen unter `.pio/build/xiao_esp32s3/artifacts/`
 
 ## Host-Tests
 
-Die Logik-Module der Firmware (`src/core/`, siehe [Logik und Hardware](#logik-und-hardware))
-werden mit g++ auf dem PC getestet, teils mit echten Snapshots vom Gerät. Die ESP32-Toolchain wird
+Die Logik-Module der Firmware (`src/core/`, siehe
+[Logik und Hardware](#logik-und-hardware)) werden mit g++ auf dem PC
+getestet, teils mit echten Snapshots vom Gerät. Die ESP32-Toolchain wird
 dafür nicht gebraucht, ein Lauf dauert unter einer Sekunde.
 
 **Voraussetzung:** `g++` (C++17) und `make`. Sonst nichts: der Bild-Loader
@@ -125,7 +126,8 @@ demselben Drehsinn wie die Feinrotation (`rotateGrayscaleFb`).
 ### Logik-Modul testen
 
 `tests/Makefile` baut alle `.cpp`-Dateien unter `src/core/` (auch in
-Unterordnern) automatisch mit, eine Dateiliste gibt es nicht. `src/` liegt im
+Unterordnern) automatisch mit und übersetzt zusätzlich jeden Header dort
+einzeln, eine Dateiliste gibt es nicht. `src/` liegt im
 Include-Pfad, Tests binden Logik-Module als `#include "core/frame_align.h"` ein.
 
 ---

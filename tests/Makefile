@@ -13,15 +13,17 @@ CPPFLAGS += -I. -I../src -Ithird_party -DTEST_IMAGE_DIR='"$(CURDIR)/images"'
 
 BUILD_DIR := build
 CORE_DIR  := ../src/core
-CORE_SRCS := $(shell find $(CORE_DIR) -name '*.cpp')
+CORE_SRCS := $(sort $(shell find $(CORE_DIR) -name '*.cpp'))
+CORE_HDRS := $(sort $(shell find $(CORE_DIR) -name '*.h'))
 TEST_SRCS := $(wildcard *.cpp)
 OBJS      := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS)) \
              $(patsubst $(CORE_DIR)/%.cpp,$(BUILD_DIR)/core/%.o,$(CORE_SRCS)) \
              $(BUILD_DIR)/stb_image.o
+HDR_CHECKS := $(patsubst $(CORE_DIR)/%.h,$(BUILD_DIR)/core/%.h.ok,$(CORE_HDRS))
 BIN       := $(BUILD_DIR)/host_tests
 
 .PHONY: test clean
-test: $(BIN)
+test: $(BIN) $(HDR_CHECKS)
 	./$(BIN)
 
 $(BIN): $(OBJS)
@@ -34,6 +36,13 @@ $(BUILD_DIR)/%.o: %.cpp
 $(BUILD_DIR)/core/%.o: $(CORE_DIR)/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+# Jeder Header für sich, damit auch reine Header (z. B. Seams unter hw/) gegen
+# die Header-Regel geprüft werden
+$(BUILD_DIR)/core/%.h.ok: $(CORE_DIR)/%.h
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fsyntax-only -x c++ -include $< /dev/null
+	@touch $@
 
 # Fremdcode ohne Warnungen übersetzen
 $(BUILD_DIR)/stb_image.o: third_party/stb_image_impl.c
