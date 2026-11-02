@@ -2,8 +2,8 @@
 // bestimmen (zwei waagerechte Linien über fast die ganze Breite, eine senkrechte
 // Trennlinie zwischen "Set Temp" und "Water Temp").
 //
-// Reines C++ ohne Arduino-, esp32-camera- oder ArduinoJson-Abhängigkeit, damit
-// das Modul auch auf dem PC getestet werden kann (tests/frame_align_test.cpp).
+// Logik-Modul (ADR 0001): reines C++ ohne Arduino- oder esp32-camera-Abhängigkeit,
+// damit es auch auf dem PC getestet werden kann (tests/frame_align_test.cpp).
 #pragma once
 
 #include <cstdint>

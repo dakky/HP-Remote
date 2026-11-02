@@ -2,7 +2,7 @@
 #include "test.h"
 #include "image.h"
 
-#include "frame_align.h"
+#include "core/frame_align.h"
 
 #include <string>
 

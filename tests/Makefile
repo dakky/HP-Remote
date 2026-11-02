@@ -3,21 +3,22 @@
 #   make -C tests          baut und startet die Tests (Rückgabewert ≠ 0 bei Fehlschlag)
 #   make -C tests clean    entfernt den Build-Ordner
 #
-# Firmware-Module, die getestet werden, kommen in FIRMWARE_SRCS (reines C++
-# ohne Arduino-Abhängigkeit, z. B. ../src/frame_align.cpp).
+# Alle Logik-Module unter ../src/core/ (auch in Unterordnern) werden automatisch
+# mitgebaut, siehe docs/adr/0001-logic-host-buildable.md. Bindet eines davon
+# Arduino- oder ESP-Header ein, scheitert der Build.
 
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -g -Wall -Wextra
 CPPFLAGS += -I. -I../src -Ithird_party -DTEST_IMAGE_DIR='"$(CURDIR)/images"'
 
-BUILD_DIR     := build
-FIRMWARE_SRCS := ../src/frame_align.cpp
-TEST_SRCS     := $(wildcard *.cpp)
-OBJS          := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS) $(notdir $(FIRMWARE_SRCS))) \
-                 $(BUILD_DIR)/stb_image.o
-BIN           := $(BUILD_DIR)/host_tests
-
-vpath %.cpp . $(sort $(dir $(FIRMWARE_SRCS)))
+BUILD_DIR := build
+CORE_DIR  := ../src/core
+CORE_SRCS := $(shell find $(CORE_DIR) -name '*.cpp')
+TEST_SRCS := $(wildcard *.cpp)
+OBJS      := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS)) \
+             $(patsubst $(CORE_DIR)/%.cpp,$(BUILD_DIR)/core/%.o,$(CORE_SRCS)) \
+             $(BUILD_DIR)/stb_image.o
+BIN       := $(BUILD_DIR)/host_tests
 
 .PHONY: test clean
 test: $(BIN)
@@ -26,15 +27,18 @@ test: $(BIN)
 $(BIN): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lm
 
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c -o $@ $<
+
+$(BUILD_DIR)/core/%.o: $(CORE_DIR)/%.cpp
+	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
 # Fremdcode ohne Warnungen übersetzen
-$(BUILD_DIR)/stb_image.o: third_party/stb_image_impl.c | $(BUILD_DIR)
+$(BUILD_DIR)/stb_image.o: third_party/stb_image_impl.c
+	@mkdir -p $(@D)
 	$(CC) -O2 -w -c -o $@ $<
-
-$(BUILD_DIR):
-	mkdir -p $@
 
 clean:
 	rm -rf $(BUILD_DIR)

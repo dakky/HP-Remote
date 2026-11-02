@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 #include <vector>
 
-#include "frame_align.h"
+#include "core/frame_align.h"
 
 struct WifiConfig {
   String ssid;

@@ -22,12 +22,13 @@ Die Artefakte liegen unter `.pio/build/xiao_esp32s3/artifacts/`
 
 ## Host-Tests
 
-Reine C++-Module der Firmware (ohne Arduino-Abhängigkeit) werden mit g++ auf
-dem PC getestet, mit echten Snapshots vom Gerät. Die ESP32-Toolchain wird
+Die Logik-Module der Firmware (`src/core/`, siehe [Logik und Hardware](#logik-und-hardware))
+werden mit g++ auf dem PC getestet, teils mit echten Snapshots vom Gerät. Die ESP32-Toolchain wird
 dafür nicht gebraucht, ein Lauf dauert unter einer Sekunde.
 
 **Voraussetzung:** `g++` (C++17) und `make`. Sonst nichts: der Bild-Loader
-([stb_image](https://github.com/nothings/stb)) liegt in `tests/third_party/`.
+([stb_image](https://github.com/nothings/stb)) und
+[ArduinoJson](https://arduinojson.org) liegen in `tests/third_party/`.
 
 ### Tests ausführen
 
@@ -83,8 +84,15 @@ tests/
 ├── image.h, image.cpp    ← loadGray (PNG/JPEG laden), distort (künstlich verzerren)
 ├── *_test.cpp            ← die Tests
 ├── images/               ← Testbilder vom Gerät (siehe images/README.md)
-└── third_party/          ← stb_image v2.30 (Public Domain)
+└── third_party/          ← stb_image v2.30 (Public Domain), ArduinoJson 7.4.3 (MIT)
 ```
+
+`tests/third_party/ArduinoJson.h` ist der Single-Header von ArduinoJson in
+derselben Version wie `lib_deps` in `platformio.ini`, damit Host-Tests und
+Firmware gleich parsen. Bei einem Versionswechsel beide Stellen gemeinsam
+anpassen (Single-Header aus den
+[GitHub-Releases](https://github.com/bblanchon/ArduinoJson/releases) als
+`ArduinoJson.h` ablegen).
 
 PlatformIO baut nur `src/` und kennt `tests/` nicht (sein Test-Ordner wäre
 `test/`), die Host-Tests beeinflussen den Firmware-Build nicht.
@@ -114,13 +122,45 @@ TEST(beschreibender_name) {
 `distort` dreht und skaliert um die Bildmitte und verschiebt danach, mit
 demselben Drehsinn wie die Feinrotation (`rotateGrayscaleFb`).
 
-### Firmware-Modul testen
+### Logik-Modul testen
 
-Firmware-Dateien, die getestet werden sollen, in `tests/Makefile` eintragen:
+`tests/Makefile` baut alle `.cpp`-Dateien unter `src/core/` (auch in
+Unterordnern) automatisch mit, eine Dateiliste gibt es nicht. `src/` liegt im
+Include-Pfad, Tests binden Logik-Module als `#include "core/frame_align.h"` ein.
 
-```make
-FIRMWARE_SRCS := ../src/frame_align.cpp
+---
+
+## Logik und Hardware
+
+Die Regel steht in [ADR 0001](adr/0001-logic-host-buildable.md). Kurz:
+
+```
+src/
+├── core/                 ← Logik: reines C++, baut auf Gerät und Host
+│   ├── frame_align.*
+│   └── hw/<teil>.h       ← Hardware-Seams: nur Deklarationen freier Funktionen
+├── <teil>_hw.cpp         ← Geräte-Adapter: implementiert core/hw/<teil>.h
+└── …                     ← übrige Firmware (Webinterface, MQTT, WLAN, …)
+tests/
+└── fake_<teil>.cpp       ← Host-Fake: implementiert core/hw/<teil>.h für Tests
 ```
 
-`src/` liegt im Include-Pfad (`#include "frame_align.h"`). Die Module dürfen
-nicht von Arduino, esp32-camera oder ArduinoJson abhängen.
+- **Logik-Verzeichnis `src/core/`:** Hier liegt alles, was Entscheidungen
+  trifft oder rechnet. PlatformIO baut es automatisch mit, `make -C tests`
+  ebenfalls.
+- **Header-Regel:** Dateien unter `src/core/` binden weder `Arduino.h` noch
+  `esp_*`-Header noch Libraries mit Hardwarebezug ein (WebServer, PubSubClient,
+  Wire, WiFi, esp32-camera). Erlaubt ist ArduinoJson (header-only). Texte sind
+  `std::string`, nicht Arduino `String`; umgewandelt wird erst außerhalb von
+  `src/core/`. Ein Verstoß lässt den Host-Build scheitern und damit CI und
+  Release.
+- **Hardware-Seams:** Braucht die Logik Hardware (MAC-Adresse, Log-Ausgabe, …),
+  deklariert sie dafür freie Funktionen in einem kleinen Header pro
+  Hardware-Teil unter `src/core/hw/`. Keine Klassen mit `virtual`, keine
+  Übergabe zur Laufzeit: welche Implementierung gilt, entscheidet der Build.
+  Daten wie Config, Bilder oder Messwerte kommen als Parameter, nicht über
+  eine Seam.
+- **Geräte-Adapter:** Die Implementierung für das Gerät liegt in `src/`
+  außerhalb von `core/` und spricht nur die Hardware an, ohne eigene Logik.
+- **Host-Fakes:** Die Implementierung für den Host liegt in `tests/` und
+  liefert feste Werte oder sammelt Aufrufe, damit Tests sie prüfen können.
