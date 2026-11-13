@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
-#include "app_config.h"
+#include "core/app_config.h"
 
 void mqttApplyConfig(PubSubClient &mqtt, const AppConfig &cfg);
 void mqttPublishState(PubSubClient &mqtt, const AppConfig &cfg, const String &payload);

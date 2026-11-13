@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include <math.h>
 
-#include "app_config.h"
+#include "core/app_config.h"
 #include "core/device_identity.h"
 #include "debug_log.h"
 #include "storage_service.h"

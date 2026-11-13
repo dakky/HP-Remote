@@ -73,7 +73,7 @@ HP-Remote/
 │   ├── mqtt_ha_discovery.cpp/.h  ← HA Auto-Discovery: Sensoren, Buttons, Stream
 │   ├── web_server.cpp/.h         ← Webinterface + REST API + MJPEG Port 81
 │   ├── web_ui.h                  ← eingebettetes HTML/JS
-│   ├── app_config.cpp/.h         ← Konfiguration + JSON
+│   ├── core/app_config.*         ← Konfiguration + JSON
 │   ├── storage_service.cpp/.h    ← NVS (Preferences)
 │   ├── core/device_identity.*    ← Geräte-Namen und UID aus der MAC
 │   ├── mac_hw.cpp                ← liest die MAC (Seam core/hw/mac.h)

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "core/frame_align.h"
+#include "frame_align.h"
 
 struct WifiConfig {
   std::string ssid;

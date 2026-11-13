@@ -1,5 +1,5 @@
 #include "app_config.h"
-#include "core/device_identity.h"
+#include "device_identity.h"
 
 #include <cstring>
 
@@ -153,7 +153,8 @@ void loadDefaultConfig(AppConfig &cfg) {
     "",
     "",
     "",
-    "standard"
+    "standard",
+    false
   });
 
   cfg.rois.push_back({
@@ -179,7 +180,8 @@ void loadDefaultConfig(AppConfig &cfg) {
     "",
     "",
     "",
-    "standard"
+    "standard",
+    false
   });
 }
 
@@ -459,7 +461,8 @@ bool configFromJson(const std::string &json, AppConfig &cfg) {
 
       if (po["segs"].is<JsonArray>()) {
         int idx = 0;
-        for (JsonArray seg : po["segs"].as<JsonArray>()) {
+        JsonArray segs = po["segs"];
+        for (JsonArray seg : segs) {
           if (idx >= 7) break;
           p.segs[idx].rx = seg[0] | 0.0f;
           p.segs[idx].ry = seg[1] | 0.0f;
@@ -523,7 +526,8 @@ bool configFromJson(const std::string &json, AppConfig &cfg) {
 
       r.gaps.clear();
       if (o["gaps"].is<JsonArray>()) {
-        for (int g : o["gaps"].as<JsonArray>()) r.gaps.push_back(g);
+        JsonArray gaps = o["gaps"];
+        for (int g : gaps) r.gaps.push_back(g);
       }
 
       r.threshold_on = o["threshold_on"] | 125;

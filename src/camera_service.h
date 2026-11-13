@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include "esp_camera.h"
-#include "app_config.h"
+#include "core/app_config.h"
 #include "core/frame_align.h"
 
 // Anzahl der Framebuffer – muss mit c.fb_count in cameraStart() übereinstimmen.

@@ -3,7 +3,7 @@
 #include <ArduinoOTA.h>
 #include <WiFi.h>
 
-#include "app_config.h"
+#include "core/app_config.h"
 #include "debug_log.h"
 
 extern AppConfig cfg;

@@ -141,6 +141,7 @@ Die Regel steht in [ADR 0001](adr/0001-logic-host-buildable.md). Kurz:
 src/
 ├── core/                 ← Logik: reines C++, baut auf Gerät und Host
 │   ├── frame_align.*
+│   ├── app_config.*      ← Konfiguration: Defaults, Config ↔ JSON
 │   ├── log.*             ← Log-Makros, Level per logSetLevel()
 │   ├── device_identity.* ← Geräte-Namen und UID aus der MAC
 │   └── hw/<teil>.h       ← Hardware-Seams: nur Deklarationen freier Funktionen
