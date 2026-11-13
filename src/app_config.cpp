@@ -1,6 +1,5 @@
 #include "app_config.h"
-#include "device_identity.h"
-#include "string_convert.h"
+#include "core/device_identity.h"
 
 #include <cstring>
 
@@ -58,14 +57,14 @@ void loadDefaultConfig(AppConfig &cfg) {
 
   /* Device */
 
-  cfg.device.id = toStd(defaultDeviceId());
-  cfg.device.name = toStd(defaultDeviceName());
+  cfg.device.id = defaultDeviceId();
+  cfg.device.name = defaultDeviceName();
 
   /* WiFi */
 
   cfg.wifi.ssid = "";
   cfg.wifi.password = "";
-  cfg.wifi.hostname = toStd(defaultHostname());
+  cfg.wifi.hostname = defaultHostname();
 
   /* Camera */
 
@@ -107,7 +106,7 @@ void loadDefaultConfig(AppConfig &cfg) {
   cfg.mqtt.image_enabled = false;
   cfg.mqtt.host = "192.168.1.10";
   cfg.mqtt.port = 1883;
-  cfg.mqtt.topic = toStd(defaultMqttTopicBase()) + "/state";
+  cfg.mqtt.topic = defaultMqttTopicBase() + "/state";
   cfg.mqtt.username = "";
   cfg.mqtt.password = "";
 
@@ -559,9 +558,9 @@ bool configFromJson(const std::string &json, AppConfig &cfg) {
   // Sie basieren auf der persistent UID des konkreten Geräts, damit beim
   // Kopieren einer Config zwischen zwei Geräten keine MQTT-Topic-Kollision
   // und keine HA-Discovery-Kollision entsteht.
-  next.device.id   = toStd(defaultDeviceId());
-  next.wifi.hostname = toStd(defaultHostname());
-  next.mqtt.topic  = toStd(defaultMqttTopicBase()) + "/state";
+  next.device.id   = defaultDeviceId();
+  next.wifi.hostname = defaultHostname();
+  next.mqtt.topic  = defaultMqttTopicBase() + "/state";
 
   cfg = next;
   return true;

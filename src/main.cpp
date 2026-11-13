@@ -6,7 +6,7 @@
 #include <math.h>
 
 #include "app_config.h"
-#include "device_identity.h"
+#include "core/device_identity.h"
 #include "debug_log.h"
 #include "storage_service.h"
 #include "wifi_manager.h"
@@ -855,7 +855,7 @@ void setup() {
          (unsigned)next->size);
   }
 
-  // Mount LittleFS before loadDefaultConfig so devicePersistentUid() is available.
+  // Mount LittleFS before loadConfigFromFile reads the saved config.
   if (!storageBegin()) {
     LOGE("LittleFS mount failed\n");
   } else {
@@ -872,13 +872,13 @@ void setup() {
       cfg.device.id.find("000000")    != std::string::npos ||
       cfg.device.id.length() == 0) {
     LOGI("Migrating legacy device id '%s' -> defaults\n", cfg.device.id.c_str());
-    cfg.device.id   = toStd(defaultDeviceId());
-    cfg.device.name = toStd(defaultDeviceName());
-    cfg.wifi.hostname = toStd(defaultHostname());
+    cfg.device.id   = defaultDeviceId();
+    cfg.device.name = defaultDeviceName();
+    cfg.wifi.hostname = defaultHostname();
     // MQTT-Topic nur migrieren wenn es noch das alte Format hat
     if (cfg.mqtt.topic.find("wp_remote") != std::string::npos ||
         cfg.mqtt.topic.find("000000")    != std::string::npos) {
-      cfg.mqtt.topic = toStd(defaultMqttTopicBase());
+      cfg.mqtt.topic = defaultMqttTopicBase();
     }
     saveConfigToFile(cfg);
   }

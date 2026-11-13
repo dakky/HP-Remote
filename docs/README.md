@@ -75,7 +75,8 @@ HP-Remote/
 │   ├── web_ui.h                  ← eingebettetes HTML/JS
 │   ├── app_config.cpp/.h         ← Konfiguration + JSON
 │   ├── storage_service.cpp/.h    ← NVS (Preferences)
-│   ├── device_identity.cpp/.h    ← MAC-basierte Geräte-UID
+│   ├── core/device_identity.*    ← Geräte-Namen und UID aus der MAC
+│   ├── mac_hw.cpp                ← liest die MAC (Seam core/hw/mac.h)
 │   ├── wifi_manager.cpp/.h       ← WiFi + AP-Setup
 │   ├── ota_service.cpp/.h        ← OTA
 │   └── debug_log.h               ← Log-Makros

@@ -4,7 +4,7 @@
 #include "debug_log.h"
 #include "string_convert.h"
 #include "mqtt_ha_discovery.h"
-#include "device_identity.h"
+#include "core/device_identity.h"
 #include "touch_controller.h"
 #include "touch_config.h"
 #include "room_sensor.h"
@@ -234,7 +234,7 @@ bool mqttEnsureConnected(PubSubClient &mqtt, const AppConfig &cfg) {
 
     if (mqtt.connected()) return true;
 
-    String cid       = "hp-remote-" + devicePersistentUid();
+    String cid       = "hp-remote-" + toArduino(devicePersistentUid());
     String availTopic = mqttAvailabilityTopic(cfg);
 
     LOGI("Connecting MQTT to %s:%u\n", cfg.mqtt.host.c_str(), cfg.mqtt.port);

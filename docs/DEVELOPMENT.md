@@ -142,6 +142,7 @@ src/
 ├── core/                 ← Logik: reines C++, baut auf Gerät und Host
 │   ├── frame_align.*
 │   ├── log.*             ← Log-Makros, Level per logSetLevel()
+│   ├── device_identity.* ← Geräte-Namen und UID aus der MAC
 │   └── hw/<teil>.h       ← Hardware-Seams: nur Deklarationen freier Funktionen
 ├── <teil>_hw.cpp         ← Geräte-Adapter: implementiert core/hw/<teil>.h
 └── …                     ← übrige Firmware (Webinterface, MQTT, WLAN, …)

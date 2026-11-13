@@ -6,7 +6,7 @@
 #include <ctype.h>
 
 #include "debug_log.h"
-#include "device_identity.h"
+#include "core/device_identity.h"
 #include "string_convert.h"
 
 // URL der Weboberfläche – HA zeigt dafür den "Besuchen"-Button in den Geräte-Infos
@@ -72,7 +72,7 @@ static String haComponentForRoi(const Roi &roi) {
 }
 
 static String haObjectIdForRoi(const AppConfig &cfg, const Roi &roi) {
-  return sanitizeId("hp_" + deviceMacSuffix() + "_" + toArduino(roi.id));
+  return sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_" + toArduino(roi.id));
 }
 
 static String haConfigTopicForRoi(const AppConfig &cfg, const Roi &roi) {
@@ -90,7 +90,7 @@ static String mqttImageTopic(const AppConfig &cfg) {
 }
 
 static String haCameraObjectId(const AppConfig &cfg) {
-  return sanitizeId("hp_" + deviceMacSuffix() + "_snapshot");
+  return sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_snapshot");
 }
 
 static String haCameraConfigTopic(const AppConfig &cfg) {
@@ -282,7 +282,7 @@ static bool publishDiscoveryForRoi(PubSubClient &mqtt, const AppConfig &cfg, con
 
   doc["name"] = haEntityNameForRoi(roi);
   doc["object_id"] = objectId;
-  doc["unique_id"] = devicePersistentUid() + "_" + sanitizeId(toArduino(roi.id));
+  doc["unique_id"] = toArduino(devicePersistentUid()) + "_" + sanitizeId(toArduino(roi.id));
   doc["state_topic"] = cfg.mqtt.topic;
   doc["value_template"] = haValueTemplateForRoi(roi);
   doc["availability_topic"] = mqttAvailabilityTopic(cfg);
@@ -317,7 +317,7 @@ static bool publishDiscoveryForRoi(PubSubClient &mqtt, const AppConfig &cfg, con
 
   JsonObject device = doc["device"].to<JsonObject>();
   JsonArray identifiers = device["identifiers"].to<JsonArray>();
-  identifiers.add(devicePersistentUid());
+  identifiers.add(toArduino(devicePersistentUid()));
   device["name"] = cfg.device.name;
   device["manufacturer"] = "DocBigs-Lab";
   device["configuration_url"] = deviceConfigUrl();
@@ -361,7 +361,7 @@ static void publishDiscoveryForSnapshot(PubSubClient &mqtt, const AppConfig &cfg
   JsonDocument doc;
   doc["name"] = "Snapshot";
   doc["object_id"] = haCameraObjectId(cfg);
-  doc["unique_id"] = devicePersistentUid() + "_snapshot";
+  doc["unique_id"] = toArduino(devicePersistentUid()) + "_snapshot";
   // HA MQTT image entity (homeassistant/image/) uses "image_topic" for raw binary JPEG
   doc["image_topic"] = mqttImageTopic(cfg);
   doc["availability_topic"] = mqttAvailabilityTopic(cfg);
@@ -371,7 +371,7 @@ static void publishDiscoveryForSnapshot(PubSubClient &mqtt, const AppConfig &cfg
 
   JsonObject device = doc["device"].to<JsonObject>();
   JsonArray identifiers = device["identifiers"].to<JsonArray>();
-  identifiers.add(devicePersistentUid());
+  identifiers.add(toArduino(devicePersistentUid()));
   device["name"] = cfg.device.name;
   device["manufacturer"] = "DocBigs-Lab";
   device["configuration_url"] = deviceConfigUrl();
@@ -441,13 +441,13 @@ void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
     String availTopic = toArduino(cfg.mqtt.topic) + "/availability";
 
     for (const auto &b : btns) {
-        String uid = devicePersistentUid() + "_touch_" + b.id;
+        String uid = toArduino(devicePersistentUid()) + "_touch_" + b.id;
         String topic = toArduino(cfg.ha.discovery_prefix) + "/button/" + uid + "/config";
 
         JsonDocument doc;
         doc["name"]             = b.name;
         doc["unique_id"]        = uid;
-        doc["object_id"]        = "hp_" + deviceMacSuffix() + "_" + b.id;
+        doc["object_id"]        = "hp_" + toArduino(deviceMacSuffix()) + "_" + b.id;
         doc["command_topic"]    = cmdTopic;
         doc["payload_press"]    = b.payload;
         doc["availability_topic"] = availTopic;
@@ -458,7 +458,7 @@ void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
 
         JsonObject device = doc["device"].to<JsonObject>();
         JsonArray ids = device["identifiers"].to<JsonArray>();
-        ids.add(devicePersistentUid());
+        ids.add(toArduino(devicePersistentUid()));
         device["name"]         = cfg.device.name;
         device["manufacturer"] = "DocBigs-Lab";
         device["configuration_url"] = deviceConfigUrl();
@@ -504,8 +504,8 @@ void mqttPublishRoomSensorDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
   String availTopic = mqttRoomAvailabilityTopic(cfg);
 
   for (const auto &d : defs) {
-    String objectId = sanitizeId("hp_" + deviceMacSuffix() + "_" + d.key);
-    String uid = devicePersistentUid() + "_" + d.key;
+    String objectId = sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_" + d.key);
+    String uid = toArduino(devicePersistentUid()) + "_" + d.key;
     String topic = toArduino(cfg.ha.discovery_prefix) + "/sensor/" + objectId + "/config";
 
     JsonDocument doc;
@@ -524,7 +524,7 @@ void mqttPublishRoomSensorDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
 
     JsonObject device = doc["device"].to<JsonObject>();
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(devicePersistentUid());
+    identifiers.add(toArduino(devicePersistentUid()));
     device["name"] = cfg.device.name;
     device["manufacturer"] = "DocBigs-Lab";
     device["configuration_url"] = deviceConfigUrl();
@@ -556,22 +556,22 @@ void mqttPublishStreamDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
                   : WiFi.softAPIP().toString();
 
     String liveUrl = "http://" + ip + "/live";
-    String uid     = devicePersistentUid() + "_live";
+    String uid     = toArduino(devicePersistentUid()) + "_live";
 
     // Live-URL als retained Sensor publishen – für HA Automationen / Dashboard
     {
-        String uid2  = devicePersistentUid() + "_live_url";
+        String uid2  = toArduino(devicePersistentUid()) + "_live_url";
         String topic = toArduino(cfg.ha.discovery_prefix) + "/sensor/" + uid2 + "/config";
         JsonDocument doc;
         doc["name"]            = "HP-Remote Live URL";
         doc["unique_id"]       = uid2;
-        doc["object_id"]       = "hp_" + deviceMacSuffix() + "_live_url";
+        doc["object_id"]       = "hp_" + toArduino(deviceMacSuffix()) + "_live_url";
         doc["state_topic"]     = toArduino(cfg.mqtt.topic) + "/live_url";
         doc["icon"]            = "mdi:web";
         doc["entity_category"] = "diagnostic";
 
         JsonObject device = doc["device"].to<JsonObject>();
-        device["identifiers"][0] = devicePersistentUid();
+        device["identifiers"][0] = toArduino(devicePersistentUid());
         device["name"]           = cfg.device.name;
         device["manufacturer"]   = "DocBigs-Lab";
         device["configuration_url"] = deviceConfigUrl();
