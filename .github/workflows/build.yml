@@ -46,7 +46,8 @@ jobs:
             exit 1
           fi
           mkdir -p "$OUT"
-          python3 .github/scripts/changelog.py notes CHANGELOG.md > "$OUT/notes.md"
+          python3 .github/scripts/changelog.py notes CHANGELOG.md \
+            --link-base "https://github.com/$GITHUB_REPOSITORY/blob/v$VERSION/" > "$OUT/notes.md"
           python3 .github/scripts/changelog.py release "$VERSION" "$(TZ=Europe/Berlin date +%F)" CHANGELOG.md
           base=$(git rev-parse HEAD)
           git config user.name "github-actions[bot]"

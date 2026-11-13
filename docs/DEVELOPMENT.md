@@ -60,7 +60,12 @@ Befehl auch in Skripten oder einem Git-Hook verwenden lässt.
 
 Die CI (`.github/workflows/build.yml`) führt die Host-Tests bei jedem Push
 im Build-Job vor der Firmware aus; schlagen sie fehl, wird weder Firmware
-gebaut noch eine Release angelegt.
+gebaut noch eine Release angelegt. Ebenso die Tests des Changelog-Skripts,
+das beim Release die Release Notes aus `CHANGELOG.md` liest:
+
+```sh
+python3 .github/scripts/test_changelog.py
+```
 
 ### Weitere Befehle
 

@@ -117,9 +117,11 @@ Notes.
 
 In GitHub Actions **Firmware build > Run workflow** starten und die
 Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow
-benennt den Abschnitt in `## 1.2.0 – <Datum>` um, committet das auf `main`,
-baut diesen Commit, erstellt den Tag `v1.2.0` und veröffentlicht das GitHub
-Release. Fehlt der Abschnitt oder ist er leer, bricht er vor dem Build ab. Kommt
+benennt den Abschnitt in `## 1.2.0 – <Datum>` um, committet und taggt das als
+`v1.2.0` und baut diesen Commit. Erst nach erfolgreichem Build landen Commit und
+Tag auf `main`, dann veröffentlicht er das GitHub Release. Relative Links im
+Abschnitt zeigen in den Release Notes auf die Dateien im Tag. Fehlt der
+Abschnitt oder ist er leer, bricht er vor dem Build ab. Kommt
 während des Laufs ein anderer Push auf `main`, scheitert das Release, ohne etwas
 zu überschreiben; dann einfach neu starten.
 

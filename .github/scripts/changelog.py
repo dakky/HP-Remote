@@ -2,8 +2,9 @@
 
 Wird vom Release-Lauf in .github/workflows/build.yml aufgerufen:
 
-  changelog.py notes CHANGELOG.md
-      gibt den Text des Abschnitts aus (die Release Notes)
+  changelog.py notes [--link-base URL] CHANGELOG.md
+      gibt den Text des Abschnitts aus (die Release Notes); relative Links
+      werden mit --link-base absolut, damit sie im GitHub-Release funktionieren
   changelog.py release <Version> <Datum> CHANGELOG.md
       benennt den Abschnitt in "## <Version> – <Datum>" um
 
@@ -11,9 +12,15 @@ Fehlt der Abschnitt, scheitern beide mit Exit-Code 1, notes auch bei leerem
 Abschnitt. Der Workflow ruft deshalb notes vor release auf.
 """
 
+import argparse
+import re
 import sys
 
 UNRELEASED = "## Unveröffentlicht"
+
+# Markdown-Link mit relativem Ziel: kein Schema (http:, mailto:), kein Anker
+# auf derselben Seite, kein absoluter Pfad
+RELATIVE_LINK = re.compile(r"\]\((?![a-zA-Z][a-zA-Z0-9+.-]*:|#|/)")
 
 
 class ChangelogError(Exception):
@@ -32,33 +39,43 @@ def unreleased_section(lines):
     return start, end
 
 
-def notes(lines):
+def notes(lines, link_base=None):
     start, end = unreleased_section(lines)
     text = "".join(lines[start:end]).strip()
     if not text:
         raise ChangelogError(f"The '{UNRELEASED}' section is empty.")
+    if link_base:
+        text = RELATIVE_LINK.sub(lambda m: "](" + link_base, text)
     return text + "\n"
 
 
 def release(lines, version, date):
+    """Benennt den Abschnitt in lines um (in place)."""
     start, _ = unreleased_section(lines)
     lines[start - 1] = f"## {version} – {date}\n"
-    return lines
 
 
-def main(argv):
-    command, path = argv[1], argv[-1]
-    with open(path, encoding="utf-8") as f:
+def main():
+    parser = argparse.ArgumentParser(description="Read or release the unreleased changelog section.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    notes_cmd = commands.add_parser("notes", help="print the section text")
+    notes_cmd.add_argument("--link-base", help="prefix for relative links, e.g. https://github.com/o/r/blob/v1.2.0/")
+    release_cmd = commands.add_parser("release", help="rename the section to '## <version> – <date>'")
+    release_cmd.add_argument("version")
+    release_cmd.add_argument("date")
+    for cmd in (notes_cmd, release_cmd):
+        cmd.add_argument("path")
+    args = parser.parse_args()
+
+    with open(args.path, encoding="utf-8") as f:
         lines = f.readlines()
     try:
-        if command == "notes":
-            sys.stdout.write(notes(lines))
-        elif command == "release":
-            lines = release(lines, argv[2], argv[3])
-            with open(path, "w", encoding="utf-8") as f:
-                f.writelines(lines)
+        if args.command == "notes":
+            sys.stdout.write(notes(lines, args.link_base))
         else:
-            raise ChangelogError(__doc__)
+            release(lines, args.version, args.date)
+            with open(args.path, "w", encoding="utf-8") as f:
+                f.writelines(lines)
     except ChangelogError as e:
         print(e, file=sys.stderr)
         return 1
@@ -66,4 +83,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())

@@ -50,6 +50,15 @@ class ChangelogTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "- Neu: Etwas.\n\n- Verbessert: Anderes.\n")
 
+    def test_notes_macht_relative_links_absolut(self):
+        self.write("## Unveröffentlicht\n"
+                   "- Siehe [SETUP.md](docs/SETUP.md#auto-align), [Web](https://x.org/a) und [Log](#log).\n")
+        result = self.run_script("notes", "--link-base", "https://github.com/o/r/blob/v1.1.0/")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout,
+                         "- Siehe [SETUP.md](https://github.com/o/r/blob/v1.1.0/docs/SETUP.md#auto-align),"
+                         " [Web](https://x.org/a) und [Log](#log).\n")
+
     def test_notes_scheitert_ohne_unveroeffentlicht_abschnitt(self):
         self.write("# Changelog\n\n## 1.0.0 – 2026-11-02\n- Erste Version.\n")
         result = self.run_script("notes")
