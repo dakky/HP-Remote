@@ -1,6 +1,6 @@
 # Changelog
 
-Diese Datei wird **manuell** gepflegt (kein Build-Skript, kein Auto-Generator) und listet nutzerrelevante Änderungen am HP-Remote. Neueste Einträge oben. Details siehe [Dokumentation](docs/SETUP.md).
+Diese Datei listet nutzerrelevante Änderungen am HP-Remote, von Hand geschrieben (kein Auto-Generator). Neueste Einträge oben. Neues kommt unter `## Unveröffentlicht`; beim Release benennt der Workflow den Abschnitt in `## <Version> – <Datum>` um und übernimmt seinen Text als Release Notes. Details siehe [Dokumentation](docs/SETUP.md).
 
 ## Unveröffentlicht
 - Interner Umbau, Verhalten unverändert.

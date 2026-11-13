@@ -14,4 +14,4 @@ Single-context. See `docs/agents/domain.md`.
 
 ## Branches
 
-`main` ist Entwicklungs- und Release-Branch. Feature-Branches (`feature/…`, `fix/…`, `chore/…`) gehen von `main` ab und werden nach `main` gemergt. Releases baut der Workflow `build.yml` per Run workflow aus `main`.
+`main` ist Entwicklungs- und Release-Branch. Feature-Branches (`feature/…`, `fix/…`, `chore/…`) gehen von `main` ab und werden nach `main` gemergt. Releases baut der Workflow `build.yml` per Run workflow aus `main`; die Release Notes kommen aus `## Unveröffentlicht` in `CHANGELOG.md`.

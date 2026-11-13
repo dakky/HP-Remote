@@ -41,9 +41,9 @@ Das Projekt wird eigenständig entwickelt; Agents schreiben nie in
 - `CHANGELOG.md` wird pro Epic gefüllt, nicht pro Ticket: als letzter Commit
   auf dem Branch vor dem Merge nach `main`, unter `## Unveröffentlicht` oben in
   der Datei. Nur was Anwender merken; reine Umbauten bekommen höchstens eine
-  Zeile („Interner Umbau, Verhalten unverändert“). Beim Release wird der
-  Abschnitt zu `## <Version> – <Datum>`, dazu kommen die Release Notes unter
-  `.github/release-notes/v<Version>.md`.
+  Zeile („Interner Umbau, Verhalten unverändert“). Der Abschnitt ist zugleich
+  der Text der Release Notes. Beim Release benennt ihn der Workflow selbst in
+  `## <Version> – <Datum>` um; von Hand wird dafür nichts geändert.
 
 ## When a skill says "publish to the issue tracker"
 

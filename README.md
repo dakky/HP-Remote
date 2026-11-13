@@ -111,10 +111,17 @@ make -C tests
 
 ## Release erstellen
 
+Voraussetzung: In [CHANGELOG.md](CHANGELOG.md) steht unter
+`## Unveröffentlicht`, was das Release bringt. Dieser Text wird zu den Release
+Notes.
+
 In GitHub Actions **Firmware build > Run workflow** starten und die
-Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow baut
-den aktuellen `main`-Commit, erstellt den Tag `v1.2.0` und veröffentlicht das
-GitHub Release.
+Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow
+benennt den Abschnitt in `## 1.2.0 – <Datum>` um, committet das auf `main`,
+baut diesen Commit, erstellt den Tag `v1.2.0` und veröffentlicht das GitHub
+Release. Fehlt der Abschnitt oder ist er leer, bricht er vor dem Build ab. Kommt
+während des Laufs ein anderer Push auf `main`, scheitert das Release, ohne etwas
+zu überschreiben; dann einfach neu starten.
 
 Das Release enthält `HP-Remote-OTA.bin` und `HP-Remote-merged.bin`.
 Anschließend veröffentlicht der Workflow den Web-Installer (`docs/`) zusammen

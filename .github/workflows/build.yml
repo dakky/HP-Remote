@@ -25,19 +25,38 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' && 'main' || github.ref }}
           fetch-depth: 0
-      - id: commit
-        name: Record build commit
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Prepare release version
+      - name: Test changelog script
+        run: python3 .github/scripts/test_changelog.py
+      # Release-Lauf: "## Unveröffentlicht" aus CHANGELOG.md wird zu den Release
+      # Notes und in "## <Version> – <Datum>" umbenannt. Gebaut wird der
+      # Commit mit der Umbenennung samt Tag; auf main landen beide erst im
+      # release-Job, nach erfolgreichem Build.
+      - name: Prepare release commit
         if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
         env:
           VERSION: ${{ inputs.release_version }}
+          OUT: ${{ runner.temp }}/release
         run: |
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
             echo "Release version must use major.minor.patch."
             exit 1
           }
+          if git rev-parse -q --verify "refs/tags/v$VERSION" > /dev/null; then
+            echo "Tag v$VERSION already exists."
+            exit 1
+          fi
+          mkdir -p "$OUT"
+          python3 .github/scripts/changelog.py notes CHANGELOG.md > "$OUT/notes.md"
+          python3 .github/scripts/changelog.py release "$VERSION" "$(TZ=Europe/Berlin date +%F)" CHANGELOG.md
+          base=$(git rev-parse HEAD)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "chore: release v$VERSION" CHANGELOG.md
           git tag "v$VERSION"
+          git bundle create "$OUT/release.bundle" "refs/tags/v$VERSION" "^$base"
+      - id: commit
+        name: Record build commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       # Host-Tests (g++, ohne ESP32-Toolchain) auf demselben Commit wie die
       # Firmware; schlagen sie fehl, entsteht keine Release. Siehe docs/DEVELOPMENT.md
       - name: Run host tests
@@ -59,6 +78,13 @@ jobs:
           name: ${{ steps.artifact.outputs.name }}
           path: .pio/build/xiao_esp32s3/artifacts/
           if-no-files-found: error
+      - name: Upload release commit
+        if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
 
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.release_version != ''
@@ -69,27 +95,38 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.build.outputs.commit }}
+          ref: main
+          fetch-depth: 0
       - name: Download firmware artifacts
         uses: actions/download-artifact@v8
         with:
           name: ${{ needs.build.outputs.artifact_name }}
           path: artifacts
-      # Eigene Release Notes aus .github/release-notes/v<Version>.md (falls
-      # vorhanden) stehen über den automatisch erzeugten.
+      - name: Download release commit
+        uses: actions/download-artifact@v8
+        with:
+          name: release-commit
+          path: ${{ runner.temp }}/release
+      # Hat sich main seit dem Build bewegt, scheitert der Push (kein
+      # Force-Push); Tag und main ändern sich nur gemeinsam.
+      - name: Push release commit and tag
+        env:
+          VERSION: ${{ inputs.release_version }}
+          BUNDLE: ${{ runner.temp }}/release/release.bundle
+        run: |
+          git fetch "$BUNDLE" "refs/tags/v$VERSION:refs/tags/v$VERSION"
+          git push --atomic origin "refs/tags/v$VERSION:refs/heads/main" "refs/tags/v$VERSION"
+      # Der Abschnitt aus CHANGELOG.md steht über den automatisch erzeugten
+      # Release Notes.
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ inputs.release_version }}
-          COMMIT: ${{ needs.build.outputs.commit }}
+          NOTES: ${{ runner.temp }}/release/notes.md
         run: |
-          notes=()
-          if [[ -f ".github/release-notes/v$VERSION.md" ]]; then
-            notes=(--notes-file ".github/release-notes/v$VERSION.md")
-          fi
-          gh release create "v$VERSION" artifacts/*.bin --target "$COMMIT" \
-            --title "HP-Remote v$VERSION" --generate-notes "${notes[@]}"
+          gh release create "v$VERSION" artifacts/*.bin --verify-tag \
+            --title "HP-Remote v$VERSION" --generate-notes --notes-file "$NOTES"
 
   pages:
     needs: [build, release]
