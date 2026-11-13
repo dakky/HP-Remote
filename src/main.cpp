@@ -865,6 +865,7 @@ void setup() {
   loadDefaultConfig(cfg);
 
   loadConfigFromFile(cfg);
+  logSetLevel(cfg.debug_level);
 
   // Migration: alte Geräte-IDs (wp_remote / 000000) auf neue Defaults zurücksetzen
   if (cfg.device.id.find("wp_remote") != std::string::npos ||
@@ -941,6 +942,9 @@ void setup() {
 static bool s_cameraStarted = false;
 
 void loop() {
+  // Level jeder Config-Änderung (Webinterface, Import, …) übernehmen
+  logSetLevel(cfg.debug_level);
+
   // Kamera beim ersten loop()-Aufruf starten (PSRAM und WiFi sind dann bereit)
   if (!s_cameraStarted) {
     s_cameraStarted = true;

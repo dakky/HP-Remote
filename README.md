@@ -145,7 +145,10 @@ HP-Remote/
 │   ├── device_identity.cpp/.h    ← MAC-basierte Geräte-UID
 │   ├── wifi_manager.cpp/.h       ← WiFi + AP-Setup
 │   ├── ota_service.cpp/.h        ← OTA
-│   └── debug_log.h               ← Log-Makros
+│   ├── core/                     ← Logik, baut auch auf dem PC (siehe docs/DEVELOPMENT.md)
+│   │   └── log.h/.cpp            ← Log-Makros + Log-Level
+│   ├── log_output_hw.cpp         ← Log-Ausgabe auf Serial
+│   └── debug_log.h               ← bindet core/log.h ein
 ├── docs/                          ← Dokumentation + Web-Installer
 │   ├── HARDWARE.md                ← Hardware & Montage
 │   ├── SETUP.md                   ← Inbetriebnahme & Konfiguration

@@ -83,6 +83,7 @@ tests/
 ├── Makefile              ← baut und startet die Tests
 ├── test.h, test_main.cpp ← Test-Gerüst: TEST, CHECK, CHECK_NEAR, REQUIRE
 ├── image.h, image.cpp    ← loadGray (PNG/JPEG laden), distort (künstlich verzerren)
+├── fake_<teil>.*         ← Host-Fakes der Hardware-Seams (z. B. Log-Ausgabe)
 ├── *_test.cpp            ← die Tests
 ├── images/               ← Testbilder vom Gerät (siehe images/README.md)
 └── third_party/          ← stb_image v2.30 (Public Domain), ArduinoJson 7.4.3 (MIT)
@@ -140,6 +141,7 @@ Die Regel steht in [ADR 0001](adr/0001-logic-host-buildable.md). Kurz:
 src/
 ├── core/                 ← Logik: reines C++, baut auf Gerät und Host
 │   ├── frame_align.*
+│   ├── log.*             ← Log-Makros, Level per logSetLevel()
 │   └── hw/<teil>.h       ← Hardware-Seams: nur Deklarationen freier Funktionen
 ├── <teil>_hw.cpp         ← Geräte-Adapter: implementiert core/hw/<teil>.h
 └── …                     ← übrige Firmware (Webinterface, MQTT, WLAN, …)
