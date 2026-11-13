@@ -6,7 +6,8 @@
 #include <ctype.h>
 
 #include "debug_log.h"
-#include "device_identity.h"
+#include "core/device_identity.h"
+#include "string_convert.h"
 
 // URL der Weboberfläche – HA zeigt dafür den "Besuchen"-Button in den Geräte-Infos
 static String deviceConfigUrl() {
@@ -52,7 +53,7 @@ static bool containsAny(const String &text, const char *const patterns[], size_t
 }
 
 static String roiSearchText(const Roi &roi) {
-  return toLowerCopy(roi.id + " " + roi.label);
+  return toLowerCopy(toArduino(roi.id + " " + roi.label));
 }
 
 static bool isErrorLikeRoi(const Roi &roi) {
@@ -71,51 +72,51 @@ static String haComponentForRoi(const Roi &roi) {
 }
 
 static String haObjectIdForRoi(const AppConfig &cfg, const Roi &roi) {
-  return sanitizeId("hp_" + deviceMacSuffix() + "_" + roi.id);
+  return sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_" + toArduino(roi.id));
 }
 
 static String haConfigTopicForRoi(const AppConfig &cfg, const Roi &roi) {
   String component = haComponentForRoi(roi);
   String objectId = haObjectIdForRoi(cfg, roi);
-  return cfg.ha.discovery_prefix + "/" + component + "/" + objectId + "/config";
+  return toArduino(cfg.ha.discovery_prefix) + "/" + component + "/" + objectId + "/config";
 }
 
 static String mqttAvailabilityTopic(const AppConfig &cfg) {
-  return cfg.mqtt.topic + "/availability";
+  return toArduino(cfg.mqtt.topic) + "/availability";
 }
 
 static String mqttImageTopic(const AppConfig &cfg) {
-  return cfg.mqtt.topic + "/snapshot";
+  return toArduino(cfg.mqtt.topic) + "/snapshot";
 }
 
 static String haCameraObjectId(const AppConfig &cfg) {
-  return sanitizeId("hp_" + deviceMacSuffix() + "_snapshot");
+  return sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_snapshot");
 }
 
 static String haCameraConfigTopic(const AppConfig &cfg) {
-  return cfg.ha.discovery_prefix + "/image/" + haCameraObjectId(cfg) + "/config";
+  return toArduino(cfg.ha.discovery_prefix) + "/image/" + haCameraObjectId(cfg) + "/config";
 }
 
 static String haEntityNameForRoi(const Roi &roi) {
   if (roi.ha_name.length() > 0) {
-    return roi.ha_name;
+    return toArduino(roi.ha_name);
   }
   if (roi.label.length() > 0) {
-    return roi.label;
+    return toArduino(roi.label);
   }
-  return roi.id;
+  return toArduino(roi.id);
 }
 
 static String haValueTemplateForRoi(const Roi &roi) {
   if (roi.type == "symbol") {
-    return "{{ 'ON' if value_json['" + roi.id + "'] else 'OFF' }}";
+    return "{{ 'ON' if value_json['" + toArduino(roi.id) + "'] else 'OFF' }}";
   }
-  return "{{ value_json['" + roi.id + "'] }}";
+  return "{{ value_json['" + toArduino(roi.id) + "'] }}";
 }
 
 static String autoUnitForRoi(const Roi &roi) {
   if (roi.ha_unit.length() > 0) {
-    return roi.ha_unit;
+    return toArduino(roi.ha_unit);
   }
 
   if (isErrorLikeRoi(roi)) {
@@ -153,7 +154,7 @@ static String autoUnitForRoi(const Roi &roi) {
 
 static String autoIconForRoi(const Roi &roi) {
   if (roi.ha_icon.length() > 0) {
-    return roi.ha_icon;
+    return toArduino(roi.ha_icon);
   }
 
   if (isErrorLikeRoi(roi)) return "mdi:alert";
@@ -192,7 +193,7 @@ static String autoIconForRoi(const Roi &roi) {
 
 static String autoDeviceClassForRoi(const Roi &roi) {
   if (roi.ha_device_class.length() > 0) {
-    return roi.ha_device_class;
+    return toArduino(roi.ha_device_class);
   }
 
   if (isErrorLikeRoi(roi)) {
@@ -230,7 +231,7 @@ static String autoDeviceClassForRoi(const Roi &roi) {
 
 static String autoStateClassForRoi(const Roi &roi) {
   if (roi.ha_state_class.length() > 0) {
-    return roi.ha_state_class;
+    return toArduino(roi.ha_state_class);
   }
 
   if (isErrorLikeRoi(roi)) {
@@ -281,7 +282,7 @@ static bool publishDiscoveryForRoi(PubSubClient &mqtt, const AppConfig &cfg, con
 
   doc["name"] = haEntityNameForRoi(roi);
   doc["object_id"] = objectId;
-  doc["unique_id"] = devicePersistentUid() + "_" + sanitizeId(roi.id);
+  doc["unique_id"] = toArduino(devicePersistentUid()) + "_" + sanitizeId(toArduino(roi.id));
   doc["state_topic"] = cfg.mqtt.topic;
   doc["value_template"] = haValueTemplateForRoi(roi);
   doc["availability_topic"] = mqttAvailabilityTopic(cfg);
@@ -316,7 +317,7 @@ static bool publishDiscoveryForRoi(PubSubClient &mqtt, const AppConfig &cfg, con
 
   JsonObject device = doc["device"].to<JsonObject>();
   JsonArray identifiers = device["identifiers"].to<JsonArray>();
-  identifiers.add(devicePersistentUid());
+  identifiers.add(toArduino(devicePersistentUid()));
   device["name"] = cfg.device.name;
   device["manufacturer"] = "DocBigs-Lab";
   device["configuration_url"] = deviceConfigUrl();
@@ -350,7 +351,7 @@ static void publishDiscoveryForSnapshot(PubSubClient &mqtt, const AppConfig &cfg
 
   if (!cfg.mqtt.image_enabled) {
     // Clear both old camera and new image entries
-    String oldCameraTopic = cfg.ha.discovery_prefix + "/camera/" + haCameraObjectId(cfg) + "/config";
+    String oldCameraTopic = toArduino(cfg.ha.discovery_prefix) + "/camera/" + haCameraObjectId(cfg) + "/config";
     mqtt.publish(oldCameraTopic.c_str(), "", true);
     mqtt.publish(topic.c_str(), "", true);
     LOGI("HA image discovery removed (image publishing disabled)\n");
@@ -360,7 +361,7 @@ static void publishDiscoveryForSnapshot(PubSubClient &mqtt, const AppConfig &cfg
   JsonDocument doc;
   doc["name"] = "Snapshot";
   doc["object_id"] = haCameraObjectId(cfg);
-  doc["unique_id"] = devicePersistentUid() + "_snapshot";
+  doc["unique_id"] = toArduino(devicePersistentUid()) + "_snapshot";
   // HA MQTT image entity (homeassistant/image/) uses "image_topic" for raw binary JPEG
   doc["image_topic"] = mqttImageTopic(cfg);
   doc["availability_topic"] = mqttAvailabilityTopic(cfg);
@@ -370,7 +371,7 @@ static void publishDiscoveryForSnapshot(PubSubClient &mqtt, const AppConfig &cfg
 
   JsonObject device = doc["device"].to<JsonObject>();
   JsonArray identifiers = device["identifiers"].to<JsonArray>();
-  identifiers.add(devicePersistentUid());
+  identifiers.add(toArduino(devicePersistentUid()));
   device["name"] = cfg.device.name;
   device["manufacturer"] = "DocBigs-Lab";
   device["configuration_url"] = deviceConfigUrl();
@@ -435,18 +436,18 @@ void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
         { "down",     "HP ↓",    "mdi:chevron-down",   "{\"button\":\"down\"}" },
     };
 
-    String cmdTopic   = cfg.mqtt.topic + "/touch/cmd";
-    String stateTopic = cfg.mqtt.topic + "/touch/state";
-    String availTopic = cfg.mqtt.topic + "/availability";
+    String cmdTopic   = toArduino(cfg.mqtt.topic) + "/touch/cmd";
+    String stateTopic = toArduino(cfg.mqtt.topic) + "/touch/state";
+    String availTopic = toArduino(cfg.mqtt.topic) + "/availability";
 
     for (const auto &b : btns) {
-        String uid = devicePersistentUid() + "_touch_" + b.id;
-        String topic = cfg.ha.discovery_prefix + "/button/" + uid + "/config";
+        String uid = toArduino(devicePersistentUid()) + "_touch_" + b.id;
+        String topic = toArduino(cfg.ha.discovery_prefix) + "/button/" + uid + "/config";
 
         JsonDocument doc;
         doc["name"]             = b.name;
         doc["unique_id"]        = uid;
-        doc["object_id"]        = "hp_" + deviceMacSuffix() + "_" + b.id;
+        doc["object_id"]        = "hp_" + toArduino(deviceMacSuffix()) + "_" + b.id;
         doc["command_topic"]    = cmdTopic;
         doc["payload_press"]    = b.payload;
         doc["availability_topic"] = availTopic;
@@ -457,7 +458,7 @@ void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
 
         JsonObject device = doc["device"].to<JsonObject>();
         JsonArray ids = device["identifiers"].to<JsonArray>();
-        ids.add(devicePersistentUid());
+        ids.add(toArduino(devicePersistentUid()));
         device["name"]         = cfg.device.name;
         device["manufacturer"] = "DocBigs-Lab";
         device["configuration_url"] = deviceConfigUrl();
@@ -482,11 +483,11 @@ void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
 // Entities als "unavailable" markiert, sobald der Sensor selbst verschwindet,
 // auch wenn das Gerät per MQTT weiterhin online ist.
 static String mqttRoomStateTopic(const AppConfig &cfg) {
-  return cfg.mqtt.topic + "/room/state";
+  return toArduino(cfg.mqtt.topic) + "/room/state";
 }
 
 static String mqttRoomAvailabilityTopic(const AppConfig &cfg) {
-  return cfg.mqtt.topic + "/room/availability";
+  return toArduino(cfg.mqtt.topic) + "/room/availability";
 }
 
 void mqttPublishRoomSensorDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
@@ -503,9 +504,9 @@ void mqttPublishRoomSensorDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
   String availTopic = mqttRoomAvailabilityTopic(cfg);
 
   for (const auto &d : defs) {
-    String objectId = sanitizeId("hp_" + deviceMacSuffix() + "_" + d.key);
-    String uid = devicePersistentUid() + "_" + d.key;
-    String topic = cfg.ha.discovery_prefix + "/sensor/" + objectId + "/config";
+    String objectId = sanitizeId("hp_" + toArduino(deviceMacSuffix()) + "_" + d.key);
+    String uid = toArduino(devicePersistentUid()) + "_" + d.key;
+    String topic = toArduino(cfg.ha.discovery_prefix) + "/sensor/" + objectId + "/config";
 
     JsonDocument doc;
     doc["name"] = d.name;
@@ -523,7 +524,7 @@ void mqttPublishRoomSensorDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
 
     JsonObject device = doc["device"].to<JsonObject>();
     JsonArray identifiers = device["identifiers"].to<JsonArray>();
-    identifiers.add(devicePersistentUid());
+    identifiers.add(toArduino(devicePersistentUid()));
     device["name"] = cfg.device.name;
     device["manufacturer"] = "DocBigs-Lab";
     device["configuration_url"] = deviceConfigUrl();
@@ -555,22 +556,22 @@ void mqttPublishStreamDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
                   : WiFi.softAPIP().toString();
 
     String liveUrl = "http://" + ip + "/live";
-    String uid     = devicePersistentUid() + "_live";
+    String uid     = toArduino(devicePersistentUid()) + "_live";
 
     // Live-URL als retained Sensor publishen – für HA Automationen / Dashboard
     {
-        String uid2  = devicePersistentUid() + "_live_url";
-        String topic = cfg.ha.discovery_prefix + "/sensor/" + uid2 + "/config";
+        String uid2  = toArduino(devicePersistentUid()) + "_live_url";
+        String topic = toArduino(cfg.ha.discovery_prefix) + "/sensor/" + uid2 + "/config";
         JsonDocument doc;
         doc["name"]            = "HP-Remote Live URL";
         doc["unique_id"]       = uid2;
-        doc["object_id"]       = "hp_" + deviceMacSuffix() + "_live_url";
-        doc["state_topic"]     = cfg.mqtt.topic + "/live_url";
+        doc["object_id"]       = "hp_" + toArduino(deviceMacSuffix()) + "_live_url";
+        doc["state_topic"]     = toArduino(cfg.mqtt.topic) + "/live_url";
         doc["icon"]            = "mdi:web";
         doc["entity_category"] = "diagnostic";
 
         JsonObject device = doc["device"].to<JsonObject>();
-        device["identifiers"][0] = devicePersistentUid();
+        device["identifiers"][0] = toArduino(devicePersistentUid());
         device["name"]           = cfg.device.name;
         device["manufacturer"]   = "DocBigs-Lab";
         device["configuration_url"] = deviceConfigUrl();
@@ -583,7 +584,7 @@ void mqttPublishStreamDiscovery(PubSubClient &mqtt, const AppConfig &cfg) {
         delay(30);
 
         // URL publishen
-        mqtt.publish((cfg.mqtt.topic + "/live_url").c_str(),
+        mqtt.publish((toArduino(cfg.mqtt.topic) + "/live_url").c_str(),
                      liveUrl.c_str(), true);
         mqtt.loop();
         delay(30);

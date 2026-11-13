@@ -1,7 +1,7 @@
 #pragma once
 
 #include <PubSubClient.h>
-#include "app_config.h"
+#include "core/app_config.h"
 
 void mqttPublishHomeAssistantDiscovery(PubSubClient &mqtt, const AppConfig &cfg);
 void mqttPublishTouchDiscovery(PubSubClient &mqtt, const AppConfig &cfg);

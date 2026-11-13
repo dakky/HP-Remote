@@ -38,6 +38,12 @@ Das Projekt wird eigenständig entwickelt; Agents schreiben nie in
   der geschlossenen Sub-Issues desselben Epics lesen. Der Plan enthält nur,
   was dort noch nicht getestet ist, und verweist für den Rest auf die jeweiligen
   Sub-Issues.
+- `CHANGELOG.md` wird pro Epic gefüllt, nicht pro Ticket: als letzter Commit
+  auf dem Branch vor dem Merge nach `main`, unter `## Unveröffentlicht` oben in
+  der Datei. Nur was Anwender merken; reine Umbauten bekommen höchstens eine
+  Zeile („Interner Umbau, Verhalten unverändert“). Beim Release wird der
+  Abschnitt zu `## <Version> – <Datum>`, dazu kommen die Release Notes unter
+  `.github/release-notes/v<Version>.md`.
 
 ## When a skill says "publish to the issue tracker"
 

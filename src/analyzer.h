@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include "esp_camera.h"
-#include "app_config.h"
+#include "core/app_config.h"
 
 String evaluateCurrent(camera_fb_t *fb, AppConfig &cfg);
 String evaluateStateOnly(camera_fb_t *fb, AppConfig &cfg);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "app_config.h"
+#include "core/app_config.h"
 
 enum WifiModeState {
   WIFI_MODE_STA_OK,

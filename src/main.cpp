@@ -5,8 +5,8 @@
 #include <ArduinoJson.h>
 #include <math.h>
 
-#include "app_config.h"
-#include "device_identity.h"
+#include "core/app_config.h"
+#include "core/device_identity.h"
 #include "debug_log.h"
 #include "storage_service.h"
 #include "wifi_manager.h"
@@ -20,6 +20,7 @@
 #include "touch_config.h"
 #include "room_sensor.h"
 #include "build_info.h"   // generiert von version_build.py (FW_VERSION, FW_BUILD)
+#include "string_convert.h"
 
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
@@ -106,10 +107,10 @@ static bool acquireStateFrame(JsonDocument &doc) {
 // Leerer Rückgabestring = nicht gefunden.
 static String findRoiIdByLabel(const char* const* needles, int n) {
   for (auto &roi : cfg.rois) {
-    String lbl = roi.label;
+    String lbl = toArduino(roi.label);
     lbl.toLowerCase();
     for (int i = 0; i < n; i++) {
-      if (lbl.indexOf(needles[i]) >= 0) return roi.id;
+      if (lbl.indexOf(needles[i]) >= 0) return toArduino(roi.id);
     }
   }
   return "";
@@ -854,7 +855,7 @@ void setup() {
          (unsigned)next->size);
   }
 
-  // Mount LittleFS before loadDefaultConfig so devicePersistentUid() is available.
+  // Mount LittleFS before loadConfigFromFile reads the saved config.
   if (!storageBegin()) {
     LOGE("LittleFS mount failed\n");
   } else {
@@ -864,18 +865,19 @@ void setup() {
   loadDefaultConfig(cfg);
 
   loadConfigFromFile(cfg);
+  logSetLevel(cfg.debug_level);
 
   // Migration: alte Geräte-IDs (wp_remote / 000000) auf neue Defaults zurücksetzen
-  if (cfg.device.id.indexOf("wp_remote") >= 0 ||
-      cfg.device.id.indexOf("000000")    >= 0 ||
+  if (cfg.device.id.find("wp_remote") != std::string::npos ||
+      cfg.device.id.find("000000")    != std::string::npos ||
       cfg.device.id.length() == 0) {
     LOGI("Migrating legacy device id '%s' -> defaults\n", cfg.device.id.c_str());
     cfg.device.id   = defaultDeviceId();
     cfg.device.name = defaultDeviceName();
     cfg.wifi.hostname = defaultHostname();
     // MQTT-Topic nur migrieren wenn es noch das alte Format hat
-    if (cfg.mqtt.topic.indexOf("wp_remote") >= 0 ||
-        cfg.mqtt.topic.indexOf("000000")    >= 0) {
+    if (cfg.mqtt.topic.find("wp_remote") != std::string::npos ||
+        cfg.mqtt.topic.find("000000")    != std::string::npos) {
       cfg.mqtt.topic = defaultMqttTopicBase();
     }
     saveConfigToFile(cfg);
@@ -940,6 +942,9 @@ void setup() {
 static bool s_cameraStarted = false;
 
 void loop() {
+  // Level jeder Config-Änderung (Webinterface, Import, …) übernehmen
+  logSetLevel(cfg.debug_level);
+
   // Kamera beim ersten loop()-Aufruf starten (PSRAM und WiFi sind dann bereit)
   if (!s_cameraStarted) {
     s_cameraStarted = true;

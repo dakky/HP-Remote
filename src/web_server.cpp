@@ -11,6 +11,7 @@
 
 #include "debug_log.h"
 #include "storage_service.h"
+#include "string_convert.h"
 #include "wifi_manager.h"
 #include "camera_service.h"
 #include "analyzer.h"
@@ -49,7 +50,7 @@ static uint16_t mqttBufferSizeForConfig(const AppConfig &cfg) {
 static bool configFromJsonKeepAlignRef(const String &json, AppConfig &cfg) {
   const bool refSet = cfg.camera.align_ref_set;
   const AnchorLines ref = cfg.camera.align_ref;
-  const bool ok = configFromJson(json, cfg);
+  const bool ok = configFromJson(toStd(json), cfg);
   cfg.camera.align_ref_set = refSet;
   cfg.camera.align_ref = ref;
   return ok;
@@ -492,7 +493,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
 
   server.on("/api/config", HTTP_GET, [&]() {
     LOGD("HTTP GET /api/config\n");
-    server.send(200, "application/json", configToJson(cfg));
+    server.send(200, "application/json", toArduino(configToJson(cfg)));
   });
 
   server.on("/api/config", HTTP_POST, [&]() {
@@ -617,9 +618,9 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
       return;
     }
 
-    const String ssid = jsonStringOrDefault(doc["ssid"], "");
-    const String password = jsonStringOrDefault(doc["password"], "");
-    const String hostname = jsonStringOrDefault(doc["hostname"], "hp-remote");
+    const std::string ssid = jsonStringOrDefault(doc["ssid"], "");
+    const std::string password = jsonStringOrDefault(doc["password"], "");
+    const std::string hostname = jsonStringOrDefault(doc["hostname"], "hp-remote");
 
     cfg.wifi.ssid = ssid;
     cfg.wifi.password = password;
@@ -661,7 +662,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     LOGI("WiFi setup successful, STA IP: %s\n", ip.c_str());
 
     String resp = String("{\"ok\":true,\"connected\":true,\"ip\":\"") + ip +
-                  "\",\"ssid\":\"" + ssid + "\",\"hostname\":\"" + hostname + "\"}";
+                  "\",\"ssid\":\"" + toArduino(ssid) + "\",\"hostname\":\"" + toArduino(hostname) + "\"}";
     server.send(200, "application/json", resp);
 
     // Give the browser time to display the assigned IP before leaving AP mode.
@@ -1072,7 +1073,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
   server.on("/api/config/export", HTTP_GET, [&]() {
     LOGD("HTTP GET /api/config/export\n");
     
-    String json = configToJson(cfg);
+    String json = toArduino(configToJson(cfg));
     
     server.sendHeader("Content-Disposition", "attachment; filename=\"HP-Remote-config.json\"");
     server.send(200, "application/json", json);
@@ -1095,7 +1096,7 @@ void setupWebServer(WebServer &server, PubSubClient &mqtt, AppConfig &cfg, Strin
     // statt sie neben fremden ROIs stehen zu lassen.
     newCfg.camera.align_ref_set = false;
     newCfg.camera.align_ref = AnchorLines{};
-    if (!configFromJson(body, newCfg)) {
+    if (!configFromJson(toStd(body), newCfg)) {
       LOGE("Import: invalid JSON or parse error\n");
       server.send(400, "application/json", "{\"ok\":false,\"error\":\"invalid json\"}");
       return;

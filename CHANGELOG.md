@@ -2,6 +2,9 @@
 
 Diese Datei wird **manuell** gepflegt (kein Build-Skript, kein Auto-Generator) und listet nutzerrelevante Änderungen am HP-Remote. Neueste Einträge oben. Details siehe [Dokumentation](docs/SETUP.md).
 
+## Unveröffentlicht
+- Interner Umbau, Verhalten unverändert.
+
 ## 1.0.0 – 2026-11-02
 - Erste stabile Version als eigenständiges Projekt, mit Releases und Web Installer aus diesem Repository.
 - Neu: **Auto Align** richtet jedes Bild an den Ankerlinien des Displays aus, sodass die ROIs nach einer leichten Kameraverschiebung weiter passen. Standardmäßig aus, siehe [SETUP.md](docs/SETUP.md#auto-align-optional).

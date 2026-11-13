@@ -1,6 +1,8 @@
 #include "app_config.h"
 #include "device_identity.h"
 
+#include <cstring>
+
 struct CameraFrameOption {
   int w;
   int h;
@@ -151,7 +153,8 @@ void loadDefaultConfig(AppConfig &cfg) {
     "",
     "",
     "",
-    "standard"
+    "standard",
+    false
   });
 
   cfg.rois.push_back({
@@ -177,16 +180,17 @@ void loadDefaultConfig(AppConfig &cfg) {
     "",
     "",
     "",
-    "standard"
+    "standard",
+    false
   });
 }
 
-String jsonStringOrDefault(JsonVariantConst v, const char *def) {
+std::string jsonStringOrDefault(JsonVariantConst v, const char *def) {
   if (v.is<const char*>()) {
     const char *p = v.as<const char*>();
-    if (p) return String(p);
+    if (p) return std::string(p);
   }
-  return String(def);
+  return std::string(def);
 }
 
 static void roiToJson(JsonObject o, const Roi &r) {
@@ -221,7 +225,7 @@ static void roiToJson(JsonObject o, const Roi &r) {
   o["locked"] = r.locked;
 }
 
-String configToJson(const AppConfig &cfg) {
+std::string configToJson(const AppConfig &cfg) {
 
   JsonDocument doc;
 
@@ -329,12 +333,12 @@ String configToJson(const AppConfig &cfg) {
     roiToJson(o, r);
   }
 
-  String out;
+  std::string out;
   serializeJson(doc, out);
   return out;
 }
 
-bool configFromJson(const String &json, AppConfig &cfg) {
+bool configFromJson(const std::string &json, AppConfig &cfg) {
 
   JsonDocument doc;
 
@@ -439,7 +443,7 @@ bool configFromJson(const String &json, AppConfig &cfg) {
     for (JsonObject po : doc["seg_profiles"].as<JsonArray>()) {
       SevenSegProfile p;
       p.name = jsonStringOrDefault(po["name"], "");
-      if (p.name.isEmpty()) continue;
+      if (p.name.empty()) continue;
 
       // "standard" is always read-only – skip overwriting it from JSON,
       // the hardcoded defaults from loadDefaultConfig are kept.
@@ -457,7 +461,8 @@ bool configFromJson(const String &json, AppConfig &cfg) {
 
       if (po["segs"].is<JsonArray>()) {
         int idx = 0;
-        for (JsonArray seg : po["segs"].as<JsonArray>()) {
+        JsonArray segs = po["segs"];
+        for (JsonArray seg : segs) {
           if (idx >= 7) break;
           p.segs[idx].rx = seg[0] | 0.0f;
           p.segs[idx].ry = seg[1] | 0.0f;
@@ -521,7 +526,8 @@ bool configFromJson(const String &json, AppConfig &cfg) {
 
       r.gaps.clear();
       if (o["gaps"].is<JsonArray>()) {
-        for (int g : o["gaps"].as<JsonArray>()) r.gaps.push_back(g);
+        JsonArray gaps = o["gaps"];
+        for (int g : gaps) r.gaps.push_back(g);
       }
 
       r.threshold_on = o["threshold_on"] | 125;

@@ -1,6 +1,8 @@
 #include "storage_service.h"
 #include <Preferences.h>
 
+#include "string_convert.h"
+
 static Preferences prefs;
 static const char* NS = "wpr";     // Namespace
 static const char* KEY = "cfg";    // Key für Config-JSON
@@ -26,7 +28,7 @@ bool loadConfigFromFile(AppConfig &cfg) {
     if (legacy.length() >= 5) {
       Serial.printf("[STG] Migrating legacy String config (%u bytes) -> Blob\n",
                     (unsigned)legacy.length());
-      bool ok = configFromJson(legacy, cfg);
+      bool ok = configFromJson(toStd(legacy), cfg);
       // Sofort als Blob neu schreiben
       prefs.remove(KEY);
       prefs.putBytes(KEY, legacy.c_str(), legacy.length());
@@ -36,8 +38,7 @@ bool loadConfigFromFile(AppConfig &cfg) {
     return false;
   }
 
-  String json;
-  json.reserve(len + 1);
+  std::string json;
   {
     char *buf = (char*)malloc(len + 1);
     if (!buf) {
@@ -46,7 +47,7 @@ bool loadConfigFromFile(AppConfig &cfg) {
     }
     size_t got = prefs.getBytes(KEY, buf, len);
     buf[got] = '\0';
-    json = String(buf);
+    json.assign(buf, got);
     free(buf);
   }
 
@@ -61,7 +62,7 @@ bool loadConfigFromFile(AppConfig &cfg) {
 }
 
 bool saveConfigToFile(const AppConfig &cfg) {
-  String json = configToJson(cfg);
+  std::string json = configToJson(cfg);
   // DEBUG: locked-Status der ROIs loggen
   for (const auto &r : cfg.rois) {
     Serial.printf("[STG] SAVE roi=%s locked=%d\n", r.id.c_str(), r.locked ? 1 : 0);

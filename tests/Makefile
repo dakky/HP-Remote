@@ -3,38 +3,51 @@
 #   make -C tests          baut und startet die Tests (Rückgabewert ≠ 0 bei Fehlschlag)
 #   make -C tests clean    entfernt den Build-Ordner
 #
-# Firmware-Module, die getestet werden, kommen in FIRMWARE_SRCS (reines C++
-# ohne Arduino-Abhängigkeit, z. B. ../src/frame_align.cpp).
+# Alle Logik-Module unter ../src/core/ (auch in Unterordnern) werden automatisch
+# mitgebaut, siehe docs/adr/0001-logic-host-buildable.md. Bindet eines davon
+# Arduino- oder ESP-Header ein, scheitert der Build.
 
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -g -Wall -Wextra
 CPPFLAGS += -I. -I../src -Ithird_party -DTEST_IMAGE_DIR='"$(CURDIR)/images"'
 
-BUILD_DIR     := build
-FIRMWARE_SRCS := ../src/frame_align.cpp
-TEST_SRCS     := $(wildcard *.cpp)
-OBJS          := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS) $(notdir $(FIRMWARE_SRCS))) \
-                 $(BUILD_DIR)/stb_image.o
-BIN           := $(BUILD_DIR)/host_tests
-
-vpath %.cpp . $(sort $(dir $(FIRMWARE_SRCS)))
+BUILD_DIR := build
+CORE_DIR  := ../src/core
+CORE_SRCS := $(sort $(shell find $(CORE_DIR) -name '*.cpp'))
+CORE_HDRS := $(sort $(shell find $(CORE_DIR) -name '*.h'))
+TEST_SRCS := $(wildcard *.cpp)
+OBJS      := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS)) \
+             $(patsubst $(CORE_DIR)/%.cpp,$(BUILD_DIR)/core/%.o,$(CORE_SRCS)) \
+             $(BUILD_DIR)/stb_image.o
+HDR_CHECKS := $(patsubst $(CORE_DIR)/%.h,$(BUILD_DIR)/core/%.h.ok,$(CORE_HDRS))
+BIN       := $(BUILD_DIR)/host_tests
 
 .PHONY: test clean
-test: $(BIN)
+test: $(BIN) $(HDR_CHECKS)
 	./$(BIN)
 
 $(BIN): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lm
 
-$(BUILD_DIR)/%.o: %.cpp | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
-# Fremdcode ohne Warnungen übersetzen
-$(BUILD_DIR)/stb_image.o: third_party/stb_image_impl.c | $(BUILD_DIR)
-	$(CC) -O2 -w -c -o $@ $<
+$(BUILD_DIR)/core/%.o: $(CORE_DIR)/%.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c -o $@ $<
 
-$(BUILD_DIR):
-	mkdir -p $@
+# Jeder Header für sich, damit auch reine Header (z. B. Seams unter hw/) gegen
+# die Header-Regel geprüft werden
+$(BUILD_DIR)/core/%.h.ok: $(CORE_DIR)/%.h
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -fsyntax-only -x c++ -include $< /dev/null
+	@touch $@
+
+# Fremdcode ohne Warnungen übersetzen
+$(BUILD_DIR)/stb_image.o: third_party/stb_image_impl.c
+	@mkdir -p $(@D)
+	$(CC) -O2 -w -c -o $@ $<
 
 clean:
 	rm -rf $(BUILD_DIR)
