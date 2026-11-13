@@ -59,6 +59,18 @@ class ChangelogTest(unittest.TestCase):
                          "- Siehe [SETUP.md](https://github.com/o/r/blob/v1.1.0/docs/SETUP.md#auto-align),"
                          " [Web](https://x.org/a) und [Log](#log).\n")
 
+    def test_notes_haengt_den_footer_an(self):
+        self.write("## Unveröffentlicht\n- Neu: Etwas.\n")
+        fd, footer = tempfile.mkstemp(suffix=".md")
+        os.close(fd)
+        self.addCleanup(os.remove, footer)
+        with open(footer, "w", encoding="utf-8") as f:
+            f.write("## Installation\n\n[Setup](docs/SETUP.md)\n")
+        result = self.run_script("notes", "--footer", footer, "--link-base", "https://h/blob/v1/")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout,
+                         "- Neu: Etwas.\n\n## Installation\n\n[Setup](https://h/blob/v1/docs/SETUP.md)\n")
+
     def test_notes_scheitert_ohne_unveroeffentlicht_abschnitt(self):
         self.write("# Changelog\n\n## 1.0.0 – 2026-11-02\n- Erste Version.\n")
         result = self.run_script("notes")

@@ -2,9 +2,10 @@
 
 Wird vom Release-Lauf in .github/workflows/build.yml aufgerufen:
 
-  changelog.py notes [--link-base URL] CHANGELOG.md
-      gibt den Text des Abschnitts aus (die Release Notes); relative Links
-      werden mit --link-base absolut, damit sie im GitHub-Release funktionieren
+  changelog.py notes [--footer DATEI] [--link-base URL] CHANGELOG.md
+      gibt den Text des Abschnitts aus (die Release Notes), mit --footer
+      gefolgt vom Inhalt der Datei; relative Links werden mit --link-base
+      absolut, damit sie im GitHub-Release funktionieren
   changelog.py release <Version> <Datum> CHANGELOG.md
       benennt den Abschnitt in "## <Version> – <Datum>" um
 
@@ -39,11 +40,13 @@ def unreleased_section(lines):
     return start, end
 
 
-def notes(lines, link_base=None):
+def notes(lines, link_base=None, footer=None):
     start, end = unreleased_section(lines)
     text = "".join(lines[start:end]).strip()
     if not text:
         raise ChangelogError(f"The '{UNRELEASED}' section is empty.")
+    if footer:
+        text += "\n\n" + footer.strip()
     if link_base:
         text = RELATIVE_LINK.sub(lambda m: "](" + link_base, text)
     return text + "\n"
@@ -59,6 +62,7 @@ def main():
     parser = argparse.ArgumentParser(description="Read or release the unreleased changelog section.")
     commands = parser.add_subparsers(dest="command", required=True)
     notes_cmd = commands.add_parser("notes", help="print the section text")
+    notes_cmd.add_argument("--footer", help="file appended after the section text")
     notes_cmd.add_argument("--link-base", help="prefix for relative links, e.g. https://github.com/o/r/blob/v1.2.0/")
     release_cmd = commands.add_parser("release", help="rename the section to '## <version> – <date>'")
     release_cmd.add_argument("version")
@@ -71,7 +75,11 @@ def main():
         lines = f.readlines()
     try:
         if args.command == "notes":
-            sys.stdout.write(notes(lines, args.link_base))
+            footer = None
+            if args.footer:
+                with open(args.footer, encoding="utf-8") as f:
+                    footer = f.read()
+            sys.stdout.write(notes(lines, args.link_base, footer))
         else:
             release(lines, args.version, args.date)
             with open(args.path, "w", encoding="utf-8") as f:

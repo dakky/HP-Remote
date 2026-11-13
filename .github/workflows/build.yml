@@ -47,6 +47,7 @@ jobs:
           fi
           mkdir -p "$OUT"
           python3 .github/scripts/changelog.py notes CHANGELOG.md \
+            --footer .github/release-footer.md \
             --link-base "https://github.com/$GITHUB_REPOSITORY/blob/v$VERSION/" > "$OUT/notes.md"
           python3 .github/scripts/changelog.py release "$VERSION" "$(TZ=Europe/Berlin date +%F)" CHANGELOG.md
           base=$(git rev-parse HEAD)

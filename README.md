@@ -113,7 +113,8 @@ make -C tests
 
 Voraussetzung: In [CHANGELOG.md](CHANGELOG.md) steht unter
 `## Unveröffentlicht`, was das Release bringt. Dieser Text wird zu den Release
-Notes.
+Notes, darunter steht immer der Installationshinweis aus
+[.github/release-footer.md](.github/release-footer.md).
 
 In GitHub Actions **Firmware build > Run workflow** starten und die
 Release-Version ohne Präfix eingeben, zum Beispiel `1.2.0`. Der Workflow
