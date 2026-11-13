@@ -2,7 +2,7 @@
 
 Diese Datei listet nutzerrelevante Änderungen am HP-Remote, von Hand geschrieben (kein Auto-Generator). Neueste Einträge oben. Neues kommt unter `## Unveröffentlicht`; beim Release benennt der Workflow den Abschnitt in `## <Version> – <Datum>` um und übernimmt seinen Text als Release Notes. Details siehe [Dokumentation](docs/SETUP.md).
 
-## Unveröffentlicht
+## 1.0.1 – 2026-11-13
 - Interner Umbau, Verhalten unverändert.
 
 ## 1.0.0 – 2026-11-02
